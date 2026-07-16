@@ -53,8 +53,7 @@
                             <div
                                 data-og-preview
                                 class="w-max shadow-xl"
-                                x-bind:style="`transform: scale(${previewScale}); transform-origin: top left`"
-                                style="width: 1200px"
+                                x-bind:style="`width: 1200px; transform: scale(${previewScale}); transform-origin: top left`"
                             >
                             @include(
                                 $this->previewTemplate(),
