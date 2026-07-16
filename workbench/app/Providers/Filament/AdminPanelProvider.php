@@ -57,6 +57,12 @@ final class AdminPanelProvider extends PanelProvider
                     ])
                     ->sources([
                         ResourceSource::make(PostResource::class)
+                            ->defaultMappings([
+                                'label' => ['source' => 'static', 'value' => 'Post'],
+                                'title' => ['source' => 'column', 'value' => 'title'],
+                                'description' => ['source' => 'column', 'value' => 'summary'],
+                                'url' => ['source' => 'column', 'value' => 'slug'],
+                            ])
                             ->map(fn (Post $post): array => [
                                 'label' => 'Post',
                                 'title' => $post->title,

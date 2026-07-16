@@ -4,12 +4,13 @@
 
 Build editable 1200 × 630 Open Graph images from records exposed by Filament resources.
 
-Applications define the editable properties, resource mappings, and Blade template. The package provides the authenticated Filament workflow and browser-side PNG export.
+Applications define the initial editable properties, allowed Filament resources, and Blade template. Administrators can then maintain the property schema and column/static mappings from the same Filament page. The package stores one JSON configuration row per panel and provides browser-side PNG export.
 
 ## Installation
 
 ```bash
 composer require hardimpactdev/og-image-filament
+php artisan migrate
 php artisan filament:assets
 ```
 
@@ -17,7 +18,6 @@ Register the plugin on a Filament panel:
 
 ```php
 use App\Filament\Resources\ArticleResource;
-use App\Models\Article;
 use Filament\Panel;
 use HardImpact\OgImageFilament\OgImageFilamentPlugin;
 use HardImpact\OgImageFilament\Properties\TextProperty;
@@ -38,15 +38,31 @@ public function panel(Panel $panel): Panel
                 ])
                 ->sources([
                     ResourceSource::make(ArticleResource::class)
-                        ->map(fn (Article $article): array => [
-                            'label' => 'Article',
-                            'title' => $article->title,
-                            'description' => $article->description,
-                            'url' => route('articles.show', $article),
+                        ->defaultMappings([
+                            'label' => ['source' => 'static', 'value' => 'Article'],
+                            'title' => ['source' => 'column', 'value' => 'title'],
+                            'description' => ['source' => 'column', 'value' => 'description'],
+                            'url' => ['source' => 'column', 'value' => 'slug'],
                         ]),
                 ]),
         );
 }
+```
+
+The PHP definitions are used until the first configuration save. After that, the database row for the panel takes precedence.
+
+Open the **Configure** tab on the OG image generator page to:
+
+- Add, remove, or reorder text, textarea, and URL properties.
+- Mark properties as required and set maximum lengths.
+- Map each resource property to a model database column or static text.
+
+Relationships, accessors, computed values, URL composition, and fallbacks are intentionally not supported yet. Missing model values remain empty and editable in the **Generate** tab.
+
+The migration is loaded by the package. To publish a copy into the application instead:
+
+```bash
+php artisan vendor:publish --tag=og-image-filament-migrations
 ```
 
 Publish the starter Blade template:

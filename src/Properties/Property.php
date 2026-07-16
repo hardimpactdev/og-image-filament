@@ -32,6 +32,12 @@ abstract class Property
 
     public function label(string $label): static
     {
+        $label = trim($label);
+
+        if ($label === '') {
+            throw InvalidPropertyConfiguration::emptyLabel($this->key);
+        }
+
         $this->label = $label;
 
         return $this;
@@ -59,6 +65,18 @@ abstract class Property
     {
         return $this->isRequired;
     }
+
+    public function getLabel(): string
+    {
+        return $this->label;
+    }
+
+    public function getMaximumLength(): ?int
+    {
+        return $this->maximumLength;
+    }
+
+    abstract public function getType(): PropertyType;
 
     /**
      * @return array<int, mixed>

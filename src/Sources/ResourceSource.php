@@ -7,9 +7,11 @@ namespace HardImpact\OgImageFilament\Sources;
 use Closure;
 use Filament\Resources\Resource;
 use HardImpact\OgImageFilament\Exceptions\InvalidSourceConfiguration;
+use HardImpact\OgImageFilament\Settings\MappingSource;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 use Stringable;
 
 final class ResourceSource
@@ -24,6 +26,9 @@ final class ResourceSource
     private ?Closure $queryCallback = null;
 
     private ?Closure $mapper = null;
+
+    /** @var array<string, array{source: string, value: string}> */
+    private array $configuredDefaultMappings = [];
 
     /**
      * @param  class-string<resource>  $resource
@@ -86,6 +91,47 @@ final class ResourceSource
         return $this;
     }
 
+    public function hasMapper(): bool
+    {
+        return $this->mapper !== null;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $mappings
+     */
+    public function defaultMappings(array $mappings): self
+    {
+        $normalizedMappings = [];
+
+        foreach ($mappings as $property => $mapping) {
+            if (
+                ! is_string($property)
+                || ! is_array($mapping)
+                || ! is_string($mapping['source'] ?? null)
+                || ! is_string($mapping['value'] ?? null)
+            ) {
+                throw InvalidSourceConfiguration::invalidMapping($this->resource, (string) $property);
+            }
+
+            $source = MappingSource::tryFrom($mapping['source']);
+
+            if ($source === null) {
+                throw InvalidSourceConfiguration::invalidMapping($this->resource, $property);
+            }
+
+            $value = $mapping['value'];
+
+            $normalizedMappings[$property] = [
+                'source' => $source->value,
+                'value' => $value,
+            ];
+        }
+
+        $this->configuredDefaultMappings = $normalizedMappings;
+
+        return $this;
+    }
+
     public function getKey(): string
     {
         return $this->resource;
@@ -94,6 +140,34 @@ final class ResourceSource
     public function getLabel(): string
     {
         return $this->configuredLabel ?? $this->resource::getPluralModelLabel();
+    }
+
+    /**
+     * @return array<string, array{source: string, value: string}>
+     */
+    public function getDefaultMappings(): array
+    {
+        return $this->configuredDefaultMappings;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function getModelColumns(): array
+    {
+        $modelClass = $this->resource::getModel();
+        $model = new $modelClass;
+        $columns = $model->getConnection()
+            ->getSchemaBuilder()
+            ->getColumnListing($model->getTable());
+
+        return array_combine(
+            $columns,
+            array_map(
+                fn (string $column): string => Str::headline($column),
+                $columns,
+            ),
+        );
     }
 
     public function isAccessible(): bool

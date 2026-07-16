@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use Filament\Facades\Filament;
 use HardImpact\OgImageFilament\Filament\Pages\OgImageGenerator;
+use HardImpact\OgImageFilament\Models\OgImageSetting;
 use HardImpact\OgImageFilament\OgImageFilamentPlugin;
+use HardImpact\OgImageFilament\Settings\ConfigurationRepository;
 use Livewire\LivewireManager;
 use Workbench\App\Filament\Resources\PostResource;
 use Workbench\App\Models\Post;
@@ -101,6 +103,7 @@ it('keeps mapper failures operator safe', function (): void {
     }
 
     $plugin->getSources()[PostResource::class]
+        ->defaultMappings([])
         ->map(fn (): never => throw new RuntimeException('Sensitive mapper failure'));
 
     app(LivewireManager::class)->actingAs($user)
@@ -134,4 +137,148 @@ it('validates the configured dynamic properties before generation', function ():
         ->set('data.properties.title', '')
         ->call('generate')
         ->assertHasFormErrors(['properties.title' => 'required']);
+});
+
+it('shows PHP defaults in a same-page configuration tab', function (): void {
+    $user = User::query()->create([
+        'name' => 'Admin',
+        'email' => 'admin@example.com',
+        'password' => 'password',
+    ]);
+
+    app(LivewireManager::class)->actingAs($user)
+        ->test(OgImageGenerator::class)
+        ->assertSee('Generate')
+        ->assertSee('Configure')
+        ->assertSet('settingsData', function (array $settings): bool {
+            $properties = array_values($settings['properties']);
+
+            return $properties[0]['key'] === 'label'
+                && $properties[1]['key'] === 'title'
+                && $settings['mappings'][PostResource::class]['title']['source'] === 'column'
+                && $settings['mappings'][PostResource::class]['title']['column'] === 'title';
+        });
+});
+
+it('saves visual property and resource mapping configuration', function (): void {
+    $user = User::query()->create([
+        'name' => 'Admin',
+        'email' => 'admin@example.com',
+        'password' => 'password',
+    ]);
+
+    app(LivewireManager::class)->actingAs($user)
+        ->test(OgImageGenerator::class)
+        ->fillForm([
+            'properties' => [
+                [
+                    'key' => 'headline',
+                    'label' => 'Headline',
+                    'type' => 'text',
+                    'required' => true,
+                    'max_length' => 100,
+                ],
+                [
+                    'key' => 'eyebrow',
+                    'label' => 'Eyebrow',
+                    'type' => 'text',
+                    'required' => false,
+                    'max_length' => 40,
+                ],
+            ],
+            'mappings' => [
+                PostResource::class => [
+                    'headline' => [
+                        'source' => 'column',
+                        'column' => 'title',
+                        'static' => null,
+                    ],
+                    'eyebrow' => [
+                        'source' => 'static',
+                        'column' => null,
+                        'static' => 'Article',
+                    ],
+                ],
+            ],
+        ], 'settingsForm')
+        ->call('saveSettings')
+        ->assertNotified('OG image configuration saved');
+
+    $setting = OgImageSetting::query()->where('panel_id', 'admin')->firstOrFail();
+
+    expect($setting->properties)->toBe([
+        [
+            'key' => 'headline',
+            'label' => 'Headline',
+            'type' => 'text',
+            'required' => true,
+            'max_length' => 100,
+        ],
+        [
+            'key' => 'eyebrow',
+            'label' => 'Eyebrow',
+            'type' => 'text',
+            'required' => false,
+            'max_length' => 40,
+        ],
+    ])->and($setting->mappings)->toBe([
+        PostResource::class => [
+            'headline' => ['source' => 'column', 'value' => 'title'],
+            'eyebrow' => ['source' => 'static', 'value' => 'Article'],
+        ],
+    ]);
+});
+
+it('uses saved properties and mappings in the generator', function (): void {
+    $post = Post::query()->create([
+        'title' => 'Database configured title',
+        'slug' => 'database-configured-title',
+        'summary' => 'Summary',
+        'is_visible' => true,
+    ]);
+    $user = User::query()->create([
+        'name' => 'Admin',
+        'email' => 'admin@example.com',
+        'password' => 'password',
+    ]);
+    $plugin = Filament::getDefaultPanel()->getPlugin('og-image-filament');
+
+    if (! $plugin instanceof OgImageFilamentPlugin) {
+        throw new LogicException('The test panel registered an unexpected OG image plugin.');
+    }
+
+    resolve(ConfigurationRepository::class)->save(
+        panelId: 'admin',
+        propertyDefinitions: [
+            [
+                'key' => 'headline',
+                'label' => 'Headline',
+                'type' => 'text',
+                'required' => true,
+                'max_length' => null,
+            ],
+            [
+                'key' => 'note',
+                'label' => 'Note',
+                'type' => 'textarea',
+                'required' => false,
+                'max_length' => null,
+            ],
+        ],
+        mappings: [
+            PostResource::class => [
+                'headline' => ['source' => 'column', 'value' => 'title'],
+            ],
+        ],
+        plugin: $plugin,
+    );
+
+    app(LivewireManager::class)->actingAs($user)
+        ->test(OgImageGenerator::class)
+        ->fillForm([
+            'source' => PostResource::class,
+            'entry' => $post->id,
+        ])
+        ->assertSet('data.properties.headline', 'Database configured title')
+        ->assertSet('data.properties.note', null);
 });

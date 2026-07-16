@@ -9,6 +9,11 @@ use Filament\Forms\Components\TextInput;
 
 final class TextProperty extends Property
 {
+    public function getType(): PropertyType
+    {
+        return PropertyType::Text;
+    }
+
     public function formComponent(): Field
     {
         return $this->configure(

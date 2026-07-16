@@ -120,3 +120,35 @@ it('rejects invalid resources, empty search columns, and missing mappers', funct
         ->and(fn () => ResourceSource::make(PostResource::class)->mapRecord(new Post))
         ->toThrow(InvalidSourceConfiguration::class);
 });
+
+it('discovers model columns for visual mappings', function (): void {
+    expect(ResourceSource::make(PostResource::class)->getModelColumns())
+        ->toMatchArray([
+            'id' => 'Id',
+            'title' => 'Title',
+            'slug' => 'Slug',
+            'summary' => 'Summary',
+            'is_visible' => 'Is Visible',
+            'created_at' => 'Created At',
+            'updated_at' => 'Updated At',
+        ]);
+});
+
+it('stores serializable default mappings', function (): void {
+    $source = ResourceSource::make(PostResource::class)
+        ->defaultMappings([
+            'label' => ['source' => 'static', 'value' => 'Post'],
+            'title' => ['source' => 'column', 'value' => 'title'],
+        ]);
+
+    expect($source->getDefaultMappings())->toBe([
+        'label' => ['source' => 'static', 'value' => 'Post'],
+        'title' => ['source' => 'column', 'value' => 'title'],
+    ]);
+});
+
+it('rejects invalid serializable mappings', function (): void {
+    expect(fn () => ResourceSource::make(PostResource::class)->defaultMappings([
+        'title' => ['source' => 'computed', 'value' => 'title'],
+    ]))->toThrow(InvalidSourceConfiguration::class);
+});

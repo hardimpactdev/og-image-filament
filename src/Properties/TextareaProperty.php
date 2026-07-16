@@ -9,6 +9,11 @@ use Filament\Forms\Components\Textarea;
 
 final class TextareaProperty extends Property
 {
+    public function getType(): PropertyType
+    {
+        return PropertyType::Textarea;
+    }
+
     public function formComponent(): Field
     {
         return $this->configure(

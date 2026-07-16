@@ -42,6 +42,16 @@ final class InvalidSourceConfiguration extends InvalidArgumentException
         return new self("The mapper for OG image source [{$resource}] must return an array with string keys.");
     }
 
+    public static function invalidMapping(string $resource, string $property): self
+    {
+        return new self("The default mapping for OG image property [{$property}] on source [{$resource}] is invalid.");
+    }
+
+    public static function invalidMappingColumn(string $resource, string $property, string $column): self
+    {
+        return new self("The default mapping for OG image property [{$property}] on source [{$resource}] references unknown column [{$column}].");
+    }
+
     public static function invalidRecordTitle(string $resource, mixed $title): self
     {
         return new self(sprintf(

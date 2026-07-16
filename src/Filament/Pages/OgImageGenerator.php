@@ -17,6 +17,9 @@ use Filament\Schemas\Schema;
 use HardImpact\OgImageFilament\OgImageFilamentPlugin;
 use HardImpact\OgImageFilament\Properties\Property;
 use HardImpact\OgImageFilament\PropertyBag;
+use HardImpact\OgImageFilament\Settings\ConfigurationRepository;
+use HardImpact\OgImageFilament\Settings\OgImageConfiguration;
+use HardImpact\OgImageFilament\Settings\SettingsForm;
 use HardImpact\OgImageFilament\Sources\ResourceSource;
 use Illuminate\Contracts\Support\Htmlable;
 use Throwable;
@@ -39,10 +42,27 @@ final class OgImageGenerator extends Page
         'properties' => [],
     ];
 
+    /**
+     * @var array{
+     *     properties: array<array-key, mixed>,
+     *     mappings: array<string, mixed>
+     * }
+     */
+    public array $settingsData = [
+        'properties' => [],
+        'mappings' => [],
+    ];
+
+    public string $activeTab = 'generate';
+
     public function mount(): void
     {
+        $configuration = $this->configuration();
+
+        $this->settingsData = $this->settingsFormBuilder()->state($configuration);
         $this->resetErrorBag();
         $this->generatorForm()->fill($this->data);
+        $this->settingsFormSchema()->fill($this->settingsData);
     }
 
     public function form(Schema $schema): Schema
@@ -86,6 +106,11 @@ final class OgImageGenerator extends Page
             ]);
     }
 
+    public function settingsForm(Schema $schema): Schema
+    {
+        return $this->settingsFormBuilder()->configure($schema);
+    }
+
     public static function getSlug(?Panel $panel = null): string
     {
         return self::getPlugin($panel)->getSlug();
@@ -119,7 +144,7 @@ final class OgImageGenerator extends Page
     public function previewProperties(): PropertyBag
     {
         return PropertyBag::fromState(
-            array_values($this->plugin()->getProperties()),
+            array_values($this->configuration()->properties),
             $this->data['properties'],
         );
     }
@@ -140,6 +165,34 @@ final class OgImageGenerator extends Page
             'og-image-filament:generate',
             filename: $filename,
         );
+    }
+
+    public function saveSettings(): void
+    {
+        $state = $this->settingsFormSchema()->getState();
+        $propertyDefinitions = is_array($state['properties'] ?? null)
+            ? $state['properties']
+            : [];
+        $formMappings = is_array($state['mappings'] ?? null)
+            ? $state['mappings']
+            : [];
+
+        $configuration = $this->configurationRepository()->save(
+            panelId: $this->panelId(),
+            propertyDefinitions: $propertyDefinitions,
+            mappings: $this->settingsFormBuilder()->mappings($propertyDefinitions, $formMappings),
+            plugin: $this->plugin(),
+        );
+
+        $this->settingsData = $this->settingsFormBuilder()->state($configuration);
+        $this->settingsFormSchema()->fill($this->settingsData);
+        $this->resetSelectedEntry();
+        $this->generatorForm()->fill($this->data);
+
+        Notification::make()
+            ->title('OG image configuration saved')
+            ->success()
+            ->send();
     }
 
     /**
@@ -202,9 +255,10 @@ final class OgImageGenerator extends Page
                 throw new \RuntimeException('The selected OG image entry is unavailable.');
             }
 
-            $properties = PropertyBag::fromMapping(
-                array_values($this->plugin()->getProperties()),
-                $source->mapRecord($record),
+            $configuration = $this->configuration();
+            $properties = PropertyBag::fromState(
+                array_values($configuration->properties),
+                $configuration->mapRecord($source, $record),
             );
 
             $this->data['properties'] = $properties->all();
@@ -228,7 +282,7 @@ final class OgImageGenerator extends Page
     {
         return array_map(
             fn (Property $property): Component => $property->formComponent(),
-            array_values($this->plugin()->getProperties()),
+            array_values($this->configuration()->properties),
         );
     }
 
@@ -248,10 +302,39 @@ final class OgImageGenerator extends Page
         return self::getPlugin();
     }
 
+    private function configuration(): OgImageConfiguration
+    {
+        return $this->configurationRepository()->forPanel(
+            panelId: $this->panelId(),
+            plugin: $this->plugin(),
+        );
+    }
+
+    private function configurationRepository(): ConfigurationRepository
+    {
+        return resolve(ConfigurationRepository::class);
+    }
+
+    private function settingsFormBuilder(): SettingsForm
+    {
+        return new SettingsForm($this->plugin());
+    }
+
+    private function panelId(): string
+    {
+        return (Filament::getCurrentPanel() ?? Filament::getDefaultPanel())->getId();
+    }
+
     private function generatorForm(): Schema
     {
         return $this->getSchema('form')
             ?? throw new \LogicException('The OG image generator form schema is unavailable.');
+    }
+
+    private function settingsFormSchema(): Schema
+    {
+        return $this->getSchema('settingsForm')
+            ?? throw new \LogicException('The OG image settings form schema is unavailable.');
     }
 
     private function normalizeSourceKey(mixed $source): ?string

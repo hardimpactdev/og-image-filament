@@ -9,6 +9,11 @@ use Filament\Forms\Components\TextInput;
 
 final class UrlProperty extends Property
 {
+    public function getType(): PropertyType
+    {
+        return PropertyType::Url;
+    }
+
     /**
      * @return array<int, mixed>
      */
