@@ -124,6 +124,11 @@ final class OgImageGenerator extends Page
         );
     }
 
+    public function previewTemplate(): string
+    {
+        return $this->plugin()->getTemplate();
+    }
+
     public function generate(): void
     {
         $state = $this->generatorForm()->getState();

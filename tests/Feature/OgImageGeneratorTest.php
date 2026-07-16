@@ -17,6 +17,18 @@ it('requires panel authentication', function (): void {
         ->assertRedirect('/admin/login');
 });
 
+it('renders the configured template when Livewire has no current panel', function (): void {
+    Filament::setCurrentPanel(null);
+
+    app(LivewireManager::class)->actingAs(User::query()->create([
+        'name' => 'Admin',
+        'email' => 'admin@example.com',
+        'password' => 'password',
+    ]))
+        ->test(OgImageGenerator::class)
+        ->assertSee('data-og-card', escape: false);
+});
+
 it('selects a resource record and populates mapped properties', function (): void {
     $post = Post::query()->create([
         'title' => 'Mapped title',

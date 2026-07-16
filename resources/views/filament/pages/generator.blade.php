@@ -28,9 +28,7 @@
             <div class="overflow-auto rounded-xl border border-gray-200 bg-gray-100 p-4 dark:border-white/10 dark:bg-white/5">
                 <div data-og-preview class="w-max shadow-xl">
                     @include(
-                        filament()->getCurrentPanel()
-                            ->getPlugin('og-image-filament')
-                            ->getTemplate(),
+                        $this->previewTemplate(),
                         ['properties' => $this->previewProperties()]
                     )
                 </div>
