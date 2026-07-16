@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Tabs;
 use HardImpact\OgImageFilament\Filament\Pages\OgImageGenerator;
@@ -31,7 +33,9 @@ it('renders the configured template when Livewire has no current panel', functio
         'password' => 'password',
     ]))
         ->test(OgImageGenerator::class)
-        ->assertSee('data-og-card', escape: false);
+        ->assertSee('data-og-card', escape: false)
+        ->assertSee('data-og-generator-layout', escape: false)
+        ->assertSee('grid-template-columns: minmax(20rem, 0.75fr) minmax(36rem, 1.25fr)', escape: false);
 });
 
 it('selects a resource record and populates mapped properties', function (): void {
@@ -165,7 +169,7 @@ it('shows PHP defaults in a same-page configuration tab', function (): void {
         });
 });
 
-it('stacks the required label above its property toggle', function (): void {
+it('shows required after maximum length with its label above the toggle', function (): void {
     $user = User::query()->create([
         'name' => 'Admin',
         'email' => 'admin@example.com',
@@ -177,12 +181,27 @@ it('stacks the required label above its property toggle', function (): void {
         ->instance();
     $schema = $component->getSchema('settingsForm');
     $requiredToggle = null;
+    $labelPosition = null;
+    $keyPosition = null;
+    $requiredPosition = null;
+    $maxLengthPosition = null;
 
-    foreach ($schema?->getFlatComponents(withHidden: true) ?? [] as $field) {
+    foreach (array_values($schema?->getFlatComponents(withHidden: true) ?? []) as $position => $field) {
+        if ($field instanceof TextInput && $field->getName() === 'label') {
+            $labelPosition = $position;
+        }
+
+        if ($field instanceof TextInput && $field->getName() === 'key') {
+            $keyPosition = $position;
+        }
+
         if ($field instanceof Toggle && $field->getName() === 'required') {
             $requiredToggle = $field;
+            $requiredPosition = $position;
+        }
 
-            break;
+        if ($field instanceof TextInput && $field->getName() === 'max_length') {
+            $maxLengthPosition = $position;
         }
     }
 
@@ -192,7 +211,18 @@ it('stacks the required label above its property toggle', function (): void {
         throw new LogicException('The settings form did not contain a required toggle.');
     }
 
+    if (
+        ! is_int($labelPosition)
+        || ! is_int($keyPosition)
+        || ! is_int($requiredPosition)
+        || ! is_int($maxLengthPosition)
+    ) {
+        throw new LogicException('The settings form did not contain the expected property fields.');
+    }
+
     expect($requiredToggle->isInline())->toBeFalse();
+    expect($labelPosition)->toBeLessThan($keyPosition);
+    expect($maxLengthPosition)->toBeLessThan($requiredPosition);
 });
 
 it('shows resource mappings as a vertical resource directory', function (): void {
@@ -223,6 +253,38 @@ it('shows resource mappings as a vertical resource directory', function (): void
     }
 
     expect($resourceTabs->isVertical())->toBeTrue();
+    expect($resourceTabs->getExtraAttributes()['style'] ?? null)
+        ->toBe('margin-block: -1.5rem; margin-inline-start: -1.5rem;');
+});
+
+it('labels the mapping value selector as source', function (): void {
+    $user = User::query()->create([
+        'name' => 'Admin',
+        'email' => 'admin@example.com',
+        'password' => 'password',
+    ]);
+
+    $component = app(LivewireManager::class)->actingAs($user)
+        ->test(OgImageGenerator::class)
+        ->instance();
+    $schema = $component->getSchema('settingsForm');
+    $sourceSelect = null;
+
+    foreach ($schema?->getFlatComponents(withHidden: true) ?? [] as $field) {
+        if ($field instanceof Select && $field->getName() === 'source') {
+            $sourceSelect = $field;
+
+            break;
+        }
+    }
+
+    expect($sourceSelect)->toBeInstanceOf(Select::class);
+
+    if (! $sourceSelect instanceof Select) {
+        throw new LogicException('The settings form did not contain a mapping source selector.');
+    }
+
+    expect($sourceSelect->getLabel())->toBe('Source');
 });
 
 it('saves visual property and resource mapping configuration', function (): void {

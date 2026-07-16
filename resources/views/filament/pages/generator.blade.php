@@ -18,11 +18,12 @@
 
         @if ($activeTab === 'generate')
             <div
-                class="grid gap-6 xl:grid-cols-[minmax(20rem,0.75fr)_minmax(36rem,1.25fr)]"
+                data-og-generator-layout
                 x-data="ogImageFilamentGenerator"
                 x-on:og-image-filament:generate.window="generate($event.detail.filename)"
+                style="display: grid; gap: 1.5rem; min-width: 0"
             >
-                <form wire:submit="generate" class="space-y-6">
+                <form wire:submit="generate" class="space-y-6" style="min-width: 0">
                     {{ $this->form }}
 
                     <x-filament::button
@@ -42,8 +43,8 @@
                     ></p>
                 </form>
 
-                <aside class="min-w-0">
-                    <div class="overflow-auto rounded-xl border border-gray-200 bg-gray-100 p-4 dark:border-white/10 dark:bg-white/5">
+                <aside class="min-w-0" style="min-width: 0; max-width: 100%">
+                    <div class="overflow-auto rounded-xl border border-gray-200 bg-gray-100 p-4 dark:border-white/10 dark:bg-white/5" style="max-width: 100%; overflow: auto">
                         <div data-og-preview class="w-max shadow-xl">
                             @include(
                                 $this->previewTemplate(),
@@ -53,6 +54,14 @@
                     </div>
                 </aside>
             </div>
+
+            <style>
+                @media (min-width: 80rem) {
+                    [data-og-generator-layout] {
+                        grid-template-columns: minmax(20rem, 0.75fr) minmax(36rem, 1.25fr);
+                    }
+                }
+            </style>
         @else
             <form wire:submit="saveSettings" style="display: grid; gap: 2rem">
                 {{ $this->settingsForm }}

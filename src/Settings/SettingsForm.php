@@ -40,23 +40,23 @@ final readonly class SettingsForm
                         Repeater::make('properties')
                             ->hiddenLabel()
                             ->schema([
+                                TextInput::make('label')
+                                    ->required(),
                                 TextInput::make('key')
                                     ->required()
                                     ->rules(['regex:/^[a-z][a-z0-9_]*$/', 'distinct'])
                                     ->live(debounce: 300),
-                                TextInput::make('label')
-                                    ->required(),
                                 Select::make('type')
                                     ->options($this->propertyTypeOptions())
                                     ->required(),
-                                Toggle::make('required')
-                                    ->default(false)
-                                    ->inline(false),
                                 TextInput::make('max_length')
                                     ->label('Maximum length')
                                     ->integer()
                                     ->minValue(1)
                                     ->nullable(),
+                                Toggle::make('required')
+                                    ->default(false)
+                                    ->inline(false),
                             ])
                             ->columns(5)
                             ->minItems(1)
@@ -74,7 +74,10 @@ final readonly class SettingsForm
                                 ),
                             )
                             ->vertical()
-                            ->contained(false),
+                            ->contained(false)
+                            ->extraAttributes([
+                                'style' => 'margin-block: -1.5rem; margin-inline-start: -1.5rem;',
+                            ]),
                     ]),
             ]);
     }
@@ -202,7 +205,7 @@ final readonly class SettingsForm
                 ->statePath($property['key'])
                 ->schema([
                     Select::make('source')
-                        ->label('Value source')
+                        ->label('Source')
                         ->options([
                             MappingSource::Column->value => 'Model column',
                             MappingSource::StaticText->value => 'Static text',
