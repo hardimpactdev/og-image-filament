@@ -22,6 +22,11 @@ final readonly class SettingsForm
 {
     public function __construct(private OgImageFilamentPlugin $plugin) {}
 
+    public static function resourceStateKey(string $resource): string
+    {
+        return 'resource_'.hash('sha256', $resource);
+    }
+
     public function configure(Schema $schema): Schema
     {
         return $schema
@@ -87,10 +92,12 @@ final readonly class SettingsForm
         $mappings = [];
 
         foreach ($configuration->mappings as $resource => $resourceMappings) {
+            $resourceKey = self::resourceStateKey($resource);
+
             foreach ($resourceMappings as $key => $mapping) {
                 $source = MappingSource::from($mapping['source']);
 
-                $mappings[$resource][$key] = [
+                $mappings[$resourceKey][$key] = [
                     'source' => $source->value,
                     'column' => $source === MappingSource::Column ? $mapping['value'] : null,
                     'static' => $source === MappingSource::StaticText ? $mapping['value'] : null,
@@ -115,7 +122,7 @@ final readonly class SettingsForm
         $mappings = [];
 
         foreach ($this->plugin->getSources() as $resource => $source) {
-            $resourceMappings = $formMappings[$resource] ?? null;
+            $resourceMappings = $formMappings[self::resourceStateKey($resource)] ?? null;
 
             if (! is_array($resourceMappings)) {
                 continue;
@@ -164,7 +171,7 @@ final readonly class SettingsForm
         return array_map(
             fn (ResourceSource $source): Component => Section::make($source->getLabel())
                 ->description($source->getKey())
-                ->statePath("mappings.{$source->getKey()}")
+                ->statePath('mappings.'.self::resourceStateKey($source->getKey()))
                 ->schema($this->mappingFields($source, $properties))
                 ->collapsible(),
             array_values($this->plugin->getAccessibleSources()),

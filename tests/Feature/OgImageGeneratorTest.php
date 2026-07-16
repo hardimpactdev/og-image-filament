@@ -7,6 +7,7 @@ use HardImpact\OgImageFilament\Filament\Pages\OgImageGenerator;
 use HardImpact\OgImageFilament\Models\OgImageSetting;
 use HardImpact\OgImageFilament\OgImageFilamentPlugin;
 use HardImpact\OgImageFilament\Settings\ConfigurationRepository;
+use HardImpact\OgImageFilament\Settings\SettingsForm;
 use Livewire\LivewireManager;
 use Workbench\App\Filament\Resources\PostResource;
 use Workbench\App\Models\Post;
@@ -152,11 +153,13 @@ it('shows PHP defaults in a same-page configuration tab', function (): void {
         ->assertSee('Configure')
         ->assertSet('settingsData', function (array $settings): bool {
             $properties = array_values($settings['properties']);
+            $resourceKey = SettingsForm::resourceStateKey(PostResource::class);
 
             return $properties[0]['key'] === 'label'
                 && $properties[1]['key'] === 'title'
-                && $settings['mappings'][PostResource::class]['title']['source'] === 'column'
-                && $settings['mappings'][PostResource::class]['title']['column'] === 'title';
+                && preg_match('/^[a-z0-9_]+$/', $resourceKey) === 1
+                && $settings['mappings'][$resourceKey]['title']['source'] === 'column'
+                && $settings['mappings'][$resourceKey]['title']['column'] === 'title';
         });
 });
 
@@ -187,7 +190,7 @@ it('saves visual property and resource mapping configuration', function (): void
                 ],
             ],
             'mappings' => [
-                PostResource::class => [
+                SettingsForm::resourceStateKey(PostResource::class) => [
                     'headline' => [
                         'source' => 'column',
                         'column' => 'title',
