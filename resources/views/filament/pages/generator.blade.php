@@ -16,6 +16,27 @@
             </x-filament::tabs.item>
         </x-filament::tabs>
 
+        <style>
+            [data-og-resource-tabs] > .fi-tabs.fi-vertical {
+                border-block: 0;
+                border-inline-end: 1px solid rgb(229 231 235);
+                border-start-end-radius: 0;
+                border-end-end-radius: 0;
+                background: transparent;
+                box-shadow: none;
+            }
+
+            .dark [data-og-resource-tabs] > .fi-tabs.fi-vertical {
+                border-inline-end-color: rgb(255 255 255 / 0.1);
+            }
+
+            @media (min-width: 80rem) {
+                [data-og-generator-layout] {
+                    grid-template-columns: minmax(20rem, 0.75fr) minmax(36rem, 1.25fr);
+                }
+            }
+        </style>
+
         @if ($activeTab === 'generate')
             <div
                 data-og-generator-layout
@@ -64,14 +85,6 @@
                     </div>
                 </aside>
             </div>
-
-            <style>
-                @media (min-width: 80rem) {
-                    [data-og-generator-layout] {
-                        grid-template-columns: minmax(20rem, 0.75fr) minmax(36rem, 1.25fr);
-                    }
-                }
-            </style>
         @else
             <form wire:submit="saveSettings" style="display: grid; gap: 2rem">
                 {{ $this->settingsForm }}

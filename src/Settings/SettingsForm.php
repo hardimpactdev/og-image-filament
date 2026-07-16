@@ -76,6 +76,7 @@ final readonly class SettingsForm
                             ->vertical()
                             ->contained(false)
                             ->extraAttributes([
+                                'data-og-resource-tabs' => true,
                                 'style' => 'margin-block: -1.5rem; margin-inline-start: -1.5rem;',
                             ]),
                     ]),
