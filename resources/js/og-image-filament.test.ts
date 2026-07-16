@@ -5,6 +5,7 @@ import {
     downloadOgImage,
     findCardRoot,
     ogImageFilename,
+    resolveOgImageTitle,
     waitForCardAssets,
 } from './og-image-filament';
 
@@ -64,6 +65,15 @@ describe('OG image browser export', () => {
     it('creates a stable PNG filename', () => {
         expect(ogImageFilename(' A proper OG image! ')).toBe('a-proper-og-image.png');
         expect(ogImageFilename('')).toBe('og-image.png');
+    });
+
+    it('uses the preview title when the browser event omits its filename', () => {
+        const card = document.createElement('article');
+
+        card.dataset.ogTitle = 'Current preview title';
+
+        expect(resolveOgImageTitle(card)).toBe('Current preview title');
+        expect(resolveOgImageTitle(card, 'Livewire title')).toBe('Livewire title');
     });
 
     it('downloads through a temporary Blob URL and revokes it', async () => {

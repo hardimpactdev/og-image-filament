@@ -20,7 +20,7 @@ interface GeneratorState {
     $root: HTMLElement;
     generating: boolean;
     error: string | null;
-    generate(filename: string): Promise<void>;
+    generate(filename?: string): Promise<void>;
 }
 
 declare global {
@@ -31,6 +31,7 @@ declare global {
             downloadOgImage: typeof downloadOgImage;
             findCardRoot: typeof findCardRoot;
             ogImageFilename: typeof ogImageFilename;
+            resolveOgImageTitle: typeof resolveOgImageTitle;
             waitForCardAssets: typeof waitForCardAssets;
         };
     }
@@ -108,6 +109,10 @@ export function ogImageFilename(title: string): string {
     return `${filename || 'og-image'}.png`;
 }
 
+export function resolveOgImageTitle(card: HTMLElement, title?: string): string {
+    return title?.trim() || card.dataset.ogTitle?.trim() || 'OG image';
+}
+
 export function downloadOgImage(dataUrl: string, title: string): void {
     const [metadata, encodedData] = dataUrl.split(',', 2);
 
@@ -143,7 +148,7 @@ function registerAlpineGenerator(): void {
         generating: false,
         error: null,
 
-        async generate(this: GeneratorState, filename: string): Promise<void> {
+        async generate(this: GeneratorState, filename?: string): Promise<void> {
             this.generating = true;
             this.error = null;
 
@@ -151,7 +156,7 @@ function registerAlpineGenerator(): void {
                 const card = findCardRoot(this.$root);
                 const dataUrl = await createOgImageDataUrl(card);
 
-                downloadOgImage(dataUrl, filename);
+                downloadOgImage(dataUrl, resolveOgImageTitle(card, filename));
             } catch (error) {
                 console.error(error);
                 this.error = 'The PNG could not be generated. Please try again.';
@@ -167,6 +172,7 @@ window.OgImageFilament = {
     downloadOgImage,
     findCardRoot,
     ogImageFilename,
+    resolveOgImageTitle,
     waitForCardAssets,
 };
 
