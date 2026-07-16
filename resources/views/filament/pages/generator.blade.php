@@ -23,7 +23,7 @@
                 x-on:og-image-filament:generate.window="generate($event.detail.filename)"
                 style="display: grid; gap: 1.5rem; min-width: 0"
             >
-                <form wire:submit="generate" class="space-y-6" style="min-width: 0">
+                <form wire:submit="generate" style="display: grid; gap: 1.5rem; min-width: 0">
                     {{ $this->form }}
 
                     <x-filament::button
@@ -44,12 +44,23 @@
                 </form>
 
                 <aside class="min-w-0" style="min-width: 0; max-width: 100%">
-                    <div class="overflow-auto rounded-xl border border-gray-200 bg-gray-100 p-4 dark:border-white/10 dark:bg-white/5" style="max-width: 100%; overflow: auto">
-                        <div data-og-preview class="w-max shadow-xl">
+                    <div class="rounded-xl border border-gray-200 bg-gray-100 p-4 dark:border-white/10 dark:bg-white/5" style="max-width: 100%; overflow: hidden">
+                        <div
+                            data-og-preview-frame
+                            x-bind:style="`height: ${previewHeight}px`"
+                            style="position: relative; width: 100%; overflow: hidden"
+                        >
+                            <div
+                                data-og-preview
+                                class="w-max shadow-xl"
+                                x-bind:style="`transform: scale(${previewScale}); transform-origin: top left`"
+                                style="width: 1200px"
+                            >
                             @include(
                                 $this->previewTemplate(),
                                 ['properties' => $this->previewProperties()]
                             )
+                            </div>
                         </div>
                     </div>
                 </aside>

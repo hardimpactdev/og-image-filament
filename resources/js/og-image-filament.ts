@@ -20,7 +20,13 @@ interface GeneratorState {
     $root: HTMLElement;
     generating: boolean;
     error: string | null;
+    previewHeight: number;
+    previewObserver: ResizeObserver | null;
+    previewScale: number;
+    destroy(): void;
     generate(filename?: string): Promise<void>;
+    init(): void;
+    syncPreview(): void;
 }
 
 declare global {
@@ -147,6 +153,37 @@ function registerAlpineGenerator(): void {
     window.Alpine.data('ogImageFilamentGenerator', () => ({
         generating: false,
         error: null,
+        previewHeight: 630,
+        previewObserver: null,
+        previewScale: 1,
+
+        init(this: GeneratorState): void {
+            this.previewObserver = new ResizeObserver(() => this.syncPreview());
+
+            const previewFrame = this.$root.querySelector<HTMLElement>('[data-og-preview-frame]');
+
+            if (previewFrame === null) {
+                return;
+            }
+
+            this.previewObserver.observe(previewFrame);
+            window.requestAnimationFrame(() => this.syncPreview());
+        },
+
+        destroy(this: GeneratorState): void {
+            this.previewObserver?.disconnect();
+        },
+
+        syncPreview(this: GeneratorState): void {
+            const previewFrame = this.$root.querySelector<HTMLElement>('[data-og-preview-frame]');
+
+            if (previewFrame === null) {
+                return;
+            }
+
+            this.previewScale = Math.min(1, previewFrame.clientWidth / 1200);
+            this.previewHeight = 630 * this.previewScale;
+        },
 
         async generate(this: GeneratorState, filename?: string): Promise<void> {
             this.generating = true;
