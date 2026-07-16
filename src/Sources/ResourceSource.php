@@ -141,7 +141,7 @@ final class ResourceSource
                 continue;
             }
 
-            $options[$key] = $this->resolveRecordTitle($record);
+            $options[$key] = $this->getRecordTitle($record);
         }
 
         return $options;
@@ -167,6 +167,29 @@ final class ResourceSource
         }
 
         return $record;
+    }
+
+    public function getRecordTitle(Model $record): string
+    {
+        $model = $this->resource::getModel();
+
+        if (! $record instanceof $model) {
+            throw InvalidSourceConfiguration::invalidRecord($this->resource, $record);
+        }
+
+        $title = $this->recordTitleCallback === null
+            ? $this->resource::getRecordTitle($record)
+            : ($this->recordTitleCallback)($record);
+
+        if ($title instanceof Htmlable) {
+            return trim(html_entity_decode(strip_tags($title->toHtml()), ENT_QUOTES | ENT_HTML5));
+        }
+
+        if (is_string($title) || $title instanceof Stringable) {
+            return (string) $title;
+        }
+
+        throw InvalidSourceConfiguration::invalidRecordTitle($this->resource, $title);
     }
 
     /**
@@ -239,22 +262,5 @@ final class ResourceSource
         if ($this->queryCallback !== null) {
             ($this->queryCallback)($query);
         }
-    }
-
-    private function resolveRecordTitle(Model $record): string
-    {
-        $title = $this->recordTitleCallback === null
-            ? $this->resource::getRecordTitle($record)
-            : ($this->recordTitleCallback)($record);
-
-        if ($title instanceof Htmlable) {
-            return trim(html_entity_decode(strip_tags($title->toHtml()), ENT_QUOTES | ENT_HTML5));
-        }
-
-        if (is_string($title) || $title instanceof Stringable) {
-            return (string) $title;
-        }
-
-        throw InvalidSourceConfiguration::invalidRecordTitle($this->resource, $title);
     }
 }
