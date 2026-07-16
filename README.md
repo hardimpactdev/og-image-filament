@@ -1,93 +1,75 @@
-# :package_description
+# OG Image Filament
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/:vendor_slug/:package_slug.svg?style=flat-square)](https://packagist.org/packages/:vendor_slug/:package_slug)
-[![GitHub Tests Action Status](https://github.com/spatie/package-skeleton-laravel/actions/workflows/run-tests.yml/badge.svg)](https://github.com/:vendor_slug/:package_slug/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![GitHub Code Style Action Status](https://github.com/spatie/package-skeleton-laravel/actions/workflows/fix-php-code-style-issues.yml/badge.svg)](https://github.com/:vendor_slug/:package_slug/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/:vendor_slug/:package_slug.svg?style=flat-square)](https://packagist.org/packages/:vendor_slug/:package_slug)
-<!--delete-->
----
-This repo can be used to scaffold a Laravel package. Follow these steps to get started:
+[![Tests](https://github.com/hardimpactdev/og-image-filament/actions/workflows/run-tests.yml/badge.svg)](https://github.com/hardimpactdev/og-image-filament/actions/workflows/run-tests.yml)
 
-1. Press the "Use this template" button at the top of this repo to create a new repo with the contents of this skeleton.
-2. Run "php ./configure.php" to run a script that will replace all placeholders throughout all the files.
-3. Have fun creating your package.
-4. If you need help creating a package, consider picking up our <a href="https://laravelpackage.training">Laravel Package Training</a> video course.
----
-<!--/delete-->
-This is where your description should go. Limit it to a paragraph or two. Consider adding a small example.
+Build editable 1200 × 630 Open Graph images from records exposed by Filament resources.
 
-## Support us
-
-[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/:package_name.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/:package_name)
-
-We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
-
-We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
+Applications define the editable properties, resource mappings, and Blade template. The package provides the authenticated Filament workflow and browser-side PNG export.
 
 ## Installation
 
-You can install the package via composer:
-
 ```bash
-composer require :vendor_slug/:package_slug
+composer require hardimpactdev/og-image-filament
 ```
 
-You can publish and run the migrations with:
-
-```bash
-php artisan vendor:publish --tag=":package_slug-migrations"
-php artisan migrate
-```
-
-You can publish the config file with:
-
-```bash
-php artisan vendor:publish --tag=":package_slug-config"
-```
-
-This is the contents of the published config file:
+Register the plugin on a Filament panel:
 
 ```php
-return [
-];
+use App\Filament\Resources\ArticleResource;
+use App\Models\Article;
+use Filament\Panel;
+use HardImpact\OgImageFilament\OgImageFilamentPlugin;
+use HardImpact\OgImageFilament\Properties\TextProperty;
+use HardImpact\OgImageFilament\Properties\TextareaProperty;
+use HardImpact\OgImageFilament\Properties\UrlProperty;
+use HardImpact\OgImageFilament\Sources\ResourceSource;
+
+public function panel(Panel $panel): Panel
+{
+    return $panel
+        ->plugin(
+            OgImageFilamentPlugin::make()
+                ->properties([
+                    TextProperty::make('label')->maxLength(40),
+                    TextareaProperty::make('title')->required()->maxLength(180),
+                    TextareaProperty::make('description')->maxLength(160),
+                    UrlProperty::make('url')->required(),
+                ])
+                ->sources([
+                    ResourceSource::make(ArticleResource::class)
+                        ->map(fn (Article $article): array => [
+                            'label' => 'Article',
+                            'title' => $article->title,
+                            'description' => $article->description,
+                            'url' => route('articles.show', $article),
+                        ]),
+                ]),
+        );
+}
 ```
 
-Optionally, you can publish the views using
+Publish the starter Blade template:
 
 ```bash
-php artisan vendor:publish --tag=":package_slug-views"
+php artisan vendor:publish --tag=og-image-filament-views
 ```
 
-## Usage
+Customize:
 
-```php
-$:variable = new VendorName\Skeleton();
-echo $:variable->echoPhrase('Hello, VendorName!');
+```text
+resources/views/vendor/og-image-filament/card.blade.php
 ```
 
-## Testing
+## Development
 
 ```bash
 composer test
+composer analyse
+vendor/bin/pint --test
+bun run test
+bun run build
 ```
-
-## Changelog
-
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
-
-## Contributing
-
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
-
-## Security Vulnerabilities
-
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
-
-## Credits
-
-- [:author_name](https://github.com/:author_username)
-- [All Contributors](../../contributors)
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+MIT
