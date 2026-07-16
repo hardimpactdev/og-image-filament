@@ -124,25 +124,37 @@ final class ResourceSource
             });
         }
 
-        $records = $query
-            ->limit(min($limit, 50))
-            ->get();
-
         $options = [];
+        $limit = min($limit, 50);
+        $batchSize = max($limit, 50);
+        $offset = 0;
 
-        foreach ($records as $record) {
-            if (! $this->resource::canView($record)) {
-                continue;
+        do {
+            $records = (clone $query)
+                ->offset($offset)
+                ->limit($batchSize)
+                ->get();
+
+            foreach ($records as $record) {
+                if (! $this->resource::canView($record)) {
+                    continue;
+                }
+
+                $key = $record->getRouteKey();
+
+                if (! is_int($key) && ! is_string($key)) {
+                    continue;
+                }
+
+                $options[$key] = $this->getRecordTitle($record);
+
+                if (count($options) >= $limit) {
+                    return $options;
+                }
             }
 
-            $key = $record->getRouteKey();
-
-            if (! is_int($key) && ! is_string($key)) {
-                continue;
-            }
-
-            $options[$key] = $this->getRecordTitle($record);
-        }
+            $offset += $records->count();
+        } while ($records->count() === $batchSize);
 
         return $options;
     }

@@ -51,6 +51,32 @@ it('keeps resource and record authorization intact', function (): void {
         ->and($source->search('post'))->not->toHaveKey($hidden->id);
 });
 
+it('fills the search limit after filtering unauthorized records', function (): void {
+    foreach (range(1, 55) as $index) {
+        Post::query()->create([
+            'title' => "Matching hidden post {$index}",
+            'slug' => "matching-hidden-post-{$index}",
+            'summary' => 'Summary',
+            'is_visible' => false,
+        ]);
+    }
+
+    $visible = Post::query()->create([
+        'title' => 'Matching visible post',
+        'slug' => 'matching-visible-post',
+        'summary' => 'Summary',
+        'is_visible' => true,
+    ]);
+
+    $source = ResourceSource::make(PostResource::class)
+        ->modifyQueryUsing(fn (Builder $query): Builder => $query->orderBy('id'))
+        ->map(fn (Post $post): array => ['title' => $post->title]);
+
+    expect($source->search('Matching'))->toBe([
+        $visible->id => 'Matching visible post',
+    ]);
+});
+
 it('applies query, title, search, and mapper overrides', function (): void {
     $published = Post::query()->create([
         'title' => 'Published post',
