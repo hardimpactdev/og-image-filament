@@ -83,6 +83,7 @@ abstract class Property
     {
         return $field
             ->label($this->label)
-            ->required($this->isRequired);
+            ->required($this->isRequired)
+            ->live(debounce: 300);
     }
 }

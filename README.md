@@ -10,6 +10,7 @@ Applications define the editable properties, resource mappings, and Blade templa
 
 ```bash
 composer require hardimpactdev/og-image-filament
+php artisan filament:assets
 ```
 
 Register the plugin on a Filament panel:

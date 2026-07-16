@@ -28,6 +28,22 @@ describe('properties', function (): void {
             ->toBe(['required', 'string', 'url:http,https']);
     });
 
+    it('keeps property fields live so overrides update the preview', function (): void {
+        $fields = [
+            TextProperty::make('title')->formComponent(),
+            TextareaProperty::make('description')->formComponent(),
+            UrlProperty::make('url')->formComponent(),
+        ];
+
+        foreach ($fields as $field) {
+            $isLive = new ReflectionProperty($field, 'isLive');
+            $liveDebounce = new ReflectionProperty($field, 'liveDebounce');
+
+            expect($isLive->getValue($field))->toBeTrue()
+                ->and($liveDebounce->getValue($field))->toBe(300);
+        }
+    });
+
     it('rejects invalid property keys and maximum lengths', function (): void {
         expect(fn () => TextProperty::make('Display URL'))
             ->toThrow(InvalidPropertyConfiguration::class)
