@@ -1,0 +1,1 @@
+{"version":3,"file":"og-image-filament.iife.js","names":[],"sources":["../js/og-image-filament.ts"],"sourcesContent":["declare global {\n    interface Window {\n        OgImageFilament?: Record<string, never>;\n    }\n}\n\nwindow.OgImageFilament ??= {};\n"],"mappings":"YAMA,OAAO,kBAAoB,EAAE"}
