@@ -47,13 +47,19 @@ final class OgImageFilamentPlugin implements Plugin
     public function register(Panel $panel): void
     {
         $this->validateConfiguration();
+        $assetPath = __DIR__.'/../resources/dist/og-image-filament.iife.js';
+        $assetHash = hash_file('sha256', $assetPath);
+
+        if (! is_string($assetHash)) {
+            throw new \RuntimeException('The OG image Filament asset could not be fingerprinted.');
+        }
 
         $panel
             ->pages([OgImageGenerator::class])
             ->assets([
                 Js::make(
-                    'og-image-filament',
-                    __DIR__.'/../resources/dist/og-image-filament.iife.js',
+                    'og-image-filament-'.substr($assetHash, 0, 12),
+                    $assetPath,
                 ),
             ], package: 'hardimpactdev/og-image-filament');
     }
