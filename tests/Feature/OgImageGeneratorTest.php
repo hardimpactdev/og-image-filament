@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Tabs;
 use HardImpact\OgImageFilament\Filament\Pages\OgImageGenerator;
 use HardImpact\OgImageFilament\Models\OgImageSetting;
 use HardImpact\OgImageFilament\OgImageFilamentPlugin;
@@ -161,6 +163,66 @@ it('shows PHP defaults in a same-page configuration tab', function (): void {
                 && $settings['mappings'][$resourceKey]['title']['source'] === 'column'
                 && $settings['mappings'][$resourceKey]['title']['column'] === 'title';
         });
+});
+
+it('stacks the required label above its property toggle', function (): void {
+    $user = User::query()->create([
+        'name' => 'Admin',
+        'email' => 'admin@example.com',
+        'password' => 'password',
+    ]);
+
+    $component = app(LivewireManager::class)->actingAs($user)
+        ->test(OgImageGenerator::class)
+        ->instance();
+    $schema = $component->getSchema('settingsForm');
+    $requiredToggle = null;
+
+    foreach ($schema?->getFlatComponents(withHidden: true) ?? [] as $field) {
+        if ($field instanceof Toggle && $field->getName() === 'required') {
+            $requiredToggle = $field;
+
+            break;
+        }
+    }
+
+    expect($requiredToggle)->toBeInstanceOf(Toggle::class);
+
+    if (! $requiredToggle instanceof Toggle) {
+        throw new LogicException('The settings form did not contain a required toggle.');
+    }
+
+    expect($requiredToggle->isInline())->toBeFalse();
+});
+
+it('shows resource mappings as a vertical resource directory', function (): void {
+    $user = User::query()->create([
+        'name' => 'Admin',
+        'email' => 'admin@example.com',
+        'password' => 'password',
+    ]);
+
+    $component = app(LivewireManager::class)->actingAs($user)
+        ->test(OgImageGenerator::class)
+        ->instance();
+    $schema = $component->getSchema('settingsForm');
+    $resourceTabs = null;
+
+    foreach ($schema?->getFlatComponents(withHidden: true) ?? [] as $schemaComponent) {
+        if ($schemaComponent instanceof Tabs && $schemaComponent->getLabel() === 'Resources') {
+            $resourceTabs = $schemaComponent;
+
+            break;
+        }
+    }
+
+    expect($resourceTabs)->toBeInstanceOf(Tabs::class);
+
+    if (! $resourceTabs instanceof Tabs) {
+        throw new LogicException('The settings form did not contain resource tabs.');
+    }
+
+    expect($resourceTabs->isVertical())->toBeTrue();
 });
 
 it('saves visual property and resource mapping configuration', function (): void {

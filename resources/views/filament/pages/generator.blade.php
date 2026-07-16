@@ -1,5 +1,5 @@
 <x-filament-panels::page>
-    <div class="space-y-6">
+    <div data-og-workflow style="display: grid; gap: 2rem">
         <x-filament::tabs label="OG image workflow">
             <x-filament::tabs.item
                 :active="$activeTab === 'generate'"
@@ -54,7 +54,7 @@
                 </aside>
             </div>
         @else
-            <form wire:submit="saveSettings" class="space-y-6">
+            <form wire:submit="saveSettings" style="display: grid; gap: 2rem">
                 {{ $this->settingsForm }}
 
                 <div class="flex justify-end">

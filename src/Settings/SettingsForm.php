@@ -11,6 +11,8 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use HardImpact\OgImageFilament\OgImageFilamentPlugin;
@@ -48,7 +50,8 @@ final readonly class SettingsForm
                                     ->options($this->propertyTypeOptions())
                                     ->required(),
                                 Toggle::make('required')
-                                    ->default(false),
+                                    ->default(false)
+                                    ->inline(false),
                                 TextInput::make('max_length')
                                     ->label('Maximum length')
                                     ->integer()
@@ -63,11 +66,16 @@ final readonly class SettingsForm
                     ]),
                 Section::make('Resource mappings')
                     ->description('Map each property to a database column or fixed text.')
-                    ->schema(
-                        fn (Get $get): array => $this->mappingSections(
-                            is_array($get('properties')) ? $get('properties') : [],
-                        ),
-                    ),
+                    ->schema([
+                        Tabs::make('Resources')
+                            ->tabs(
+                                fn (Get $get): array => $this->mappingTabs(
+                                    is_array($get('properties')) ? $get('properties') : [],
+                                ),
+                            )
+                            ->vertical()
+                            ->contained(false),
+                    ]),
             ]);
     }
 
@@ -164,16 +172,19 @@ final readonly class SettingsForm
      * @param  array<array-key, mixed>  $propertyDefinitions
      * @return array<int, Component>
      */
-    private function mappingSections(array $propertyDefinitions): array
+    private function mappingTabs(array $propertyDefinitions): array
     {
         $properties = $this->validPropertyDefinitions($propertyDefinitions);
 
         return array_map(
-            fn (ResourceSource $source): Component => Section::make($source->getLabel())
-                ->description($source->getKey())
-                ->statePath('mappings.'.self::resourceStateKey($source->getKey()))
-                ->schema($this->mappingFields($source, $properties))
-                ->collapsible(),
+            fn (ResourceSource $source): Tab => Tab::make($source->getLabel())
+                ->schema([
+                    Section::make($source->getLabel())
+                        ->description($source->getKey())
+                        ->statePath('mappings.'.self::resourceStateKey($source->getKey()))
+                        ->schema($this->mappingFields($source, $properties))
+                        ->contained(false),
+                ]),
             array_values($this->plugin->getAccessibleSources()),
         );
     }
