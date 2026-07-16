@@ -187,6 +187,7 @@ final readonly class SettingsForm
                         ->description($source->getKey())
                         ->statePath('mappings.'.self::resourceStateKey($source->getKey()))
                         ->schema($this->mappingFields($source, $properties))
+                        ->extraAttributes(['data-og-resource-mapping' => true])
                         ->contained(false),
                 ]),
             array_values($this->plugin->getAccessibleSources()),

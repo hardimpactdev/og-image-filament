@@ -24,6 +24,11 @@
                 border-end-end-radius: 0;
                 background: transparent;
                 box-shadow: none;
+                padding: 1.5rem;
+            }
+
+            [data-og-resource-mapping] {
+                padding-block: 1.5rem;
             }
 
             .dark [data-og-resource-tabs] > .fi-tabs.fi-vertical {
