@@ -7,8 +7,13 @@
         <form wire:submit="generate" class="space-y-6">
             {{ $this->form }}
 
-            <x-filament::button type="submit">
-                Generate OG image
+            <x-filament::button
+                type="submit"
+                x-bind:disabled="generating"
+                x-bind:aria-busy="generating"
+            >
+                <span x-show="! generating">Generate OG image</span>
+                <span x-cloak x-show="generating">Generating…</span>
             </x-filament::button>
 
             <p
