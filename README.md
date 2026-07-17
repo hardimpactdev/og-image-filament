@@ -2,82 +2,97 @@
 
 [![Tests](https://github.com/hardimpactdev/og-image-filament/actions/workflows/run-tests.yml/badge.svg)](https://github.com/hardimpactdev/og-image-filament/actions/workflows/run-tests.yml)
 
-Build editable 1200 × 630 Open Graph images from records exposed by Filament resources.
+Generate deterministic 1200 × 630 Open Graph images from Filament resource records.
 
-Applications define the initial editable properties, allowed Filament resources, and Blade template. Administrators can then maintain the property schema and column/static mappings from the same Filament page. The package stores one JSON configuration row per panel and provides browser-side PNG export.
+Every resource owns its Blade template, DTO resolver, and storage path in application code. The Filament page is a read-only previewer with source and entry selection plus manual regeneration.
 
 ## Installation
 
 ```bash
 composer require hardimpactdev/og-image-filament
 php artisan migrate
-php artisan filament:assets
+```
+
+Create an application DTO:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Data\OgImages;
+
+use App\Models\Article;
+
+final readonly class ArticleOgImageData
+{
+    public function __construct(
+        public string $label,
+        public string $title,
+        public string $description,
+        public string $url,
+    ) {}
+
+    public static function from(Article $article): self
+    {
+        return new self(
+            label: 'Article',
+            title: $article->title,
+            description: $article->description,
+            url: url("/articles/{$article->slug}"),
+        );
+    }
+}
 ```
 
 Register the plugin on a Filament panel:
 
 ```php
+use App\Data\OgImages\ArticleOgImageData;
 use App\Filament\Resources\ArticleResource;
+use App\Models\Article;
 use Filament\Panel;
 use HardImpact\OgImageFilament\OgImageFilamentPlugin;
-use HardImpact\OgImageFilament\Properties\TextProperty;
-use HardImpact\OgImageFilament\Properties\TextareaProperty;
-use HardImpact\OgImageFilament\Properties\UrlProperty;
 use HardImpact\OgImageFilament\Sources\ResourceSource;
 
 public function panel(Panel $panel): Panel
 {
-    return $panel
-        ->plugin(
-            OgImageFilamentPlugin::make()
-                ->properties([
-                    TextProperty::make('label')->maxLength(40),
-                    TextareaProperty::make('title')->required()->maxLength(180),
-                    TextareaProperty::make('description')->maxLength(160),
-                    UrlProperty::make('url')->required(),
-                ])
-                ->sources([
-                    ResourceSource::make(ArticleResource::class)
-                        ->template('og-images.articles')
-                        ->defaultMappings([
-                            'label' => ['source' => 'static', 'value' => 'Article'],
-                            'title' => ['source' => 'column', 'value' => 'title'],
-                            'description' => ['source' => 'column', 'value' => 'description'],
-                            'url' => ['source' => 'column', 'value' => 'slug'],
-                        ]),
-                ]),
-        );
+    return $panel->plugin(
+        OgImageFilamentPlugin::make()
+            ->sources([
+                ResourceSource::make(ArticleResource::class)
+                    ->template('og-images.articles')
+                    ->dataUsing(
+                        fn (Article $article): ArticleOgImageData => ArticleOgImageData::from($article),
+                    )
+                    ->pathUsing(
+                        fn (Article $article): string => "articles/{$article->getKey()}.png",
+                    ),
+            ]),
+    );
 }
 ```
 
-The plugin template remains the fallback for every source. Call `template()` on a resource source when that resource should render a different Blade view. PHP source templates are not stored in the editable database configuration.
+The package passes the resolved DTO to Blade as `$data`:
 
-The PHP property and mapping definitions are used until the first configuration save. After that, the database row for the panel takes precedence.
-
-Open the **Configure** tab on the OG image generator page to:
-
-- Add, remove, or reorder text, textarea, and URL properties.
-- Mark properties as required and set maximum lengths.
-- Map each resource property to a model database column or static text.
-
-Relationships, accessors, computed values, URL composition, and fallbacks are intentionally not supported yet. Missing model values remain empty and editable in the **Generate** tab.
-
-The migration is loaded by the package. To publish a copy into the application instead:
-
-```bash
-php artisan vendor:publish --tag=og-image-filament-migrations
+```blade
+<article style="width: 1200px; height: 630px">
+    <p>{{ $data->label }}</p>
+    <h1>{{ $data->title }}</h1>
+    <p>{{ $data->description }}</p>
+    <p>{{ $data->url }}</p>
+</article>
 ```
 
-Publish the starter Blade template:
+Templates and DTOs belong to the consuming application, so changes remain versioned in Git and deploy with the app. Missing templates, resolvers, paths, and render failures throw immediately.
 
-```bash
-php artisan vendor:publish --tag=og-image-filament-views
-```
+## Configuration
 
-Customize:
-
-```text
-resources/views/vendor/og-image-filament/card.blade.php
+```dotenv
+OG_IMAGE_DISK=public
+OG_IMAGE_DIRECTORY=og-images
+OG_IMAGE_NODE_BINARY=/path/to/node
+OG_IMAGE_CHROME_PATH=/path/to/chrome
 ```
 
 ## Development
@@ -86,8 +101,6 @@ resources/views/vendor/og-image-filament/card.blade.php
 composer test
 composer analyse
 vendor/bin/pint --test
-bun run test
-bun run build
 ```
 
 ## License

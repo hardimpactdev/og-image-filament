@@ -7,20 +7,13 @@ namespace HardImpact\OgImageFilament;
 use BackedEnum;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
-use Filament\Support\Assets\Js;
 use HardImpact\OgImageFilament\Exceptions\InvalidPluginConfiguration;
 use HardImpact\OgImageFilament\Filament\Pages\OgImageGenerator;
-use HardImpact\OgImageFilament\Properties\Property;
 use HardImpact\OgImageFilament\Sources\ResourceSource;
 use UnitEnum;
 
 final class OgImageFilamentPlugin implements Plugin
 {
-    private string $template = 'og-image-filament::card';
-
-    /** @var array<int, mixed> */
-    private array $configuredProperties = [];
-
     /** @var array<int, mixed> */
     private array $configuredSources = [];
 
@@ -47,45 +40,12 @@ final class OgImageFilamentPlugin implements Plugin
     public function register(Panel $panel): void
     {
         $this->validateConfiguration();
-        $assetPath = __DIR__.'/../resources/dist/og-image-filament.iife.js';
-        $assetHash = hash_file('sha256', $assetPath);
-
-        if (! is_string($assetHash)) {
-            throw new \RuntimeException('The OG image Filament asset could not be fingerprinted.');
-        }
-
-        $panel
-            ->pages([OgImageGenerator::class])
-            ->assets([
-                Js::make(
-                    'og-image-filament-'.substr($assetHash, 0, 12),
-                    $assetPath,
-                ),
-            ], package: 'hardimpactdev/og-image-filament');
+        $panel->pages([OgImageGenerator::class]);
     }
 
     public function boot(Panel $panel): void {}
 
-    public function template(string $view): self
-    {
-        $this->template = $view;
-
-        return $this;
-    }
-
-    /**
-     * @param  array<int, mixed>  $properties
-     */
-    public function properties(array $properties): self
-    {
-        $this->configuredProperties = $properties;
-
-        return $this;
-    }
-
-    /**
-     * @param  array<int, mixed>  $sources
-     */
+    /** @param array<int, mixed> $sources */
     public function sources(array $sources): self
     {
         $this->configuredSources = $sources;
@@ -128,44 +88,7 @@ final class OgImageFilamentPlugin implements Plugin
         return $this;
     }
 
-    public function getTemplate(): string
-    {
-        if (trim($this->template) === '') {
-            throw InvalidPluginConfiguration::emptyTemplate();
-        }
-
-        return $this->template;
-    }
-
-    /**
-     * @return array<string, Property>
-     */
-    public function getProperties(): array
-    {
-        if ($this->configuredProperties === []) {
-            throw InvalidPluginConfiguration::missingProperties();
-        }
-
-        $properties = [];
-
-        foreach ($this->configuredProperties as $property) {
-            if (! $property instanceof Property) {
-                throw InvalidPluginConfiguration::invalidProperty($property);
-            }
-
-            if (array_key_exists($property->key, $properties)) {
-                throw InvalidPluginConfiguration::duplicateProperty($property->key);
-            }
-
-            $properties[$property->key] = $property;
-        }
-
-        return $properties;
-    }
-
-    /**
-     * @return array<string, ResourceSource>
-     */
+    /** @return array<string, ResourceSource> */
     public function getSources(): array
     {
         if ($this->configuredSources === []) {
@@ -179,6 +102,8 @@ final class OgImageFilamentPlugin implements Plugin
                 throw InvalidPluginConfiguration::invalidSource($source);
             }
 
+            $source->assertConfigured();
+
             if (array_key_exists($source->getKey(), $sources)) {
                 throw InvalidPluginConfiguration::duplicateSource($source->getKey());
             }
@@ -189,9 +114,7 @@ final class OgImageFilamentPlugin implements Plugin
         return $sources;
     }
 
-    /**
-     * @return array<string, ResourceSource>
-     */
+    /** @return array<string, ResourceSource> */
     public function getAccessibleSources(): array
     {
         return array_filter(
@@ -231,8 +154,6 @@ final class OgImageFilamentPlugin implements Plugin
 
     private function validateConfiguration(): void
     {
-        $this->getTemplate();
-        $this->getProperties();
         $this->getSources();
         $this->getSlug();
     }

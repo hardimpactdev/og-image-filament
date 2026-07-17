@@ -11,10 +11,6 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use HardImpact\OgImageFilament\OgImageFilamentPlugin;
-use HardImpact\OgImageFilament\Properties\TextareaProperty;
-use HardImpact\OgImageFilament\Properties\TextProperty;
-use HardImpact\OgImageFilament\Properties\UrlProperty;
-use HardImpact\OgImageFilament\Sources\ModelValue;
 use HardImpact\OgImageFilament\Sources\ResourceSource;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -51,34 +47,11 @@ final class AdminPanelProvider extends PanelProvider
             ])
             ->plugin(
                 OgImageFilamentPlugin::make()
-                    ->properties([
-                        TextProperty::make('label')->required()->maxLength(40),
-                        TextProperty::make('title')->required()->maxLength(180),
-                        TextareaProperty::make('description')->maxLength(240),
-                        UrlProperty::make('url')->required(),
-                    ])
                     ->sources([
                         ResourceSource::make(PostResource::class)
                             ->template('og-image-filament::card')
                             ->dataUsing(fn (Post $post): PostOgImageData => PostOgImageData::from($post))
-                            ->pathUsing(fn (Post $post): string => "posts/{$post->id}.png")
-                            ->modelValues([
-                                ModelValue::make('public_url')
-                                    ->label('Public URL')
-                                    ->resolveUsing(fn (Post $post): string => url("/posts/{$post->slug}")),
-                            ])
-                            ->defaultMappings([
-                                'label' => ['source' => 'static', 'value' => 'Post'],
-                                'title' => ['source' => 'column', 'value' => 'title'],
-                                'description' => ['source' => 'column', 'value' => 'summary'],
-                                'url' => ['source' => 'model_value', 'value' => 'public_url'],
-                            ])
-                            ->map(fn (Post $post): array => [
-                                'label' => 'Post',
-                                'title' => $post->title,
-                                'description' => $post->summary,
-                                'url' => url("/posts/{$post->slug}"),
-                            ]),
+                            ->pathUsing(fn (Post $post): string => "posts/{$post->id}.png"),
                     ]),
             );
     }

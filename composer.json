@@ -1,6 +1,6 @@
 {
     "name": "hardimpactdev/og-image-filament",
-    "description": "Generate editable Open Graph images from Filament resource records.",
+    "description": "Generate code-configured Open Graph images from Filament resource records.",
     "keywords": [
         "HardImpact",
         "laravel",

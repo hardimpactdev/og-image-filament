@@ -7,11 +7,9 @@ namespace HardImpact\OgImageFilament\Sources;
 use Closure;
 use Filament\Resources\Resource;
 use HardImpact\OgImageFilament\Exceptions\InvalidSourceConfiguration;
-use HardImpact\OgImageFilament\Settings\MappingSource;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 use Stringable;
 
 final class ResourceSource
@@ -29,19 +27,9 @@ final class ResourceSource
 
     private ?Closure $dataResolver = null;
 
-    private ?Closure $mapper = null;
-
     private ?Closure $pathResolver = null;
 
-    /** @var array<string, array{source: string, value: string}> */
-    private array $configuredDefaultMappings = [];
-
-    /** @var array<string, ModelValue> */
-    private array $configuredModelValues = [];
-
-    /**
-     * @param  class-string<resource>  $resource
-     */
+    /** @param class-string<resource> $resource */
     private function __construct(public readonly string $resource) {}
 
     public static function make(string $resource): self
@@ -80,9 +68,7 @@ final class ResourceSource
         return $this;
     }
 
-    /**
-     * @param  array<int, string>  $columns
-     */
+    /** @param array<int, string> $columns */
     public function searchColumns(array $columns): self
     {
         $columns = array_values(array_filter(
@@ -113,13 +99,6 @@ final class ResourceSource
         return $this;
     }
 
-    public function map(Closure $callback): self
-    {
-        $this->mapper = $callback;
-
-        return $this;
-    }
-
     public function pathUsing(Closure $resolver): self
     {
         $this->pathResolver = $resolver;
@@ -127,63 +106,17 @@ final class ResourceSource
         return $this;
     }
 
-    /** @param array<int, ModelValue> $values */
-    public function modelValues(array $values): self
+    public function assertConfigured(): void
     {
-        $modelValues = [];
+        $this->getTemplate();
 
-        foreach ($values as $value) {
-            if (array_key_exists($value->key, $modelValues)) {
-                throw InvalidSourceConfiguration::duplicateModelValue($this->resource, $value->key);
-            }
-
-            $modelValues[$value->key] = $value;
+        if ($this->dataResolver === null) {
+            throw InvalidSourceConfiguration::missingDataResolver($this->resource);
         }
 
-        $this->configuredModelValues = $modelValues;
-
-        return $this;
-    }
-
-    public function hasMapper(): bool
-    {
-        return $this->mapper !== null;
-    }
-
-    /**
-     * @param  array<array-key, mixed>  $mappings
-     */
-    public function defaultMappings(array $mappings): self
-    {
-        $normalizedMappings = [];
-
-        foreach ($mappings as $property => $mapping) {
-            if (
-                ! is_string($property)
-                || ! is_array($mapping)
-                || ! is_string($mapping['source'] ?? null)
-                || ! is_string($mapping['value'] ?? null)
-            ) {
-                throw InvalidSourceConfiguration::invalidMapping($this->resource, (string) $property);
-            }
-
-            $source = MappingSource::tryFrom($mapping['source']);
-
-            if ($source === null) {
-                throw InvalidSourceConfiguration::invalidMapping($this->resource, $property);
-            }
-
-            $value = $mapping['value'];
-
-            $normalizedMappings[$property] = [
-                'source' => $source->value,
-                'value' => $value,
-            ];
+        if ($this->pathResolver === null) {
+            throw InvalidSourceConfiguration::missingPathResolver($this->resource);
         }
-
-        $this->configuredDefaultMappings = $normalizedMappings;
-
-        return $this;
     }
 
     public function getKey(): string
@@ -200,11 +133,6 @@ final class ResourceSource
     {
         return $this->configuredTemplate
             ?? throw InvalidSourceConfiguration::missingTemplate($this->resource);
-    }
-
-    public function resolveTemplate(string $fallback): string
-    {
-        return $this->configuredTemplate ?? $fallback;
     }
 
     public function resolveData(Model $record): object
@@ -224,73 +152,12 @@ final class ResourceSource
         return $data;
     }
 
-    /**
-     * @return array<string, array{source: string, value: string}>
-     */
-    public function getDefaultMappings(): array
-    {
-        return $this->configuredDefaultMappings;
-    }
-
-    /** @return array<string, ModelValue> */
-    public function getModelValues(): array
-    {
-        return $this->configuredModelValues;
-    }
-
-    /** @return array<string, string> */
-    public function getModelValueOptions(): array
-    {
-        $options = [];
-
-        foreach ($this->configuredModelValues as $key => $value) {
-            $options[$key] = $value->getLabel();
-        }
-
-        return $options;
-    }
-
-    public function resolveModelValue(string $key, Model $record): mixed
-    {
-        $this->ensureValidRecord($record);
-
-        $value = $this->configuredModelValues[$key] ?? null;
-
-        if ($value === null) {
-            throw InvalidSourceConfiguration::unknownModelValue($this->resource, $key);
-        }
-
-        return $value->resolve($record);
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function getModelColumns(): array
-    {
-        $modelClass = $this->resource::getModel();
-        $model = new $modelClass;
-        $columns = $model->getConnection()
-            ->getSchemaBuilder()
-            ->getColumnListing($model->getTable());
-
-        return array_combine(
-            $columns,
-            array_map(
-                fn (string $column): string => Str::headline($column),
-                $columns,
-            ),
-        );
-    }
-
     public function isAccessible(): bool
     {
         return $this->resource::canAccess();
     }
 
-    /**
-     * @return array<int|string, string>
-     */
+    /** @return array<int|string, string> */
     public function search(?string $search, int $limit = 50): array
     {
         if (! $this->isAccessible() || $limit < 1) {
@@ -352,14 +219,7 @@ final class ResourceSource
             return null;
         }
 
-        $record = $this->resource::resolveRecordRouteBinding(
-            $key,
-            function (Builder $query): Builder {
-                $this->applyQueryCallback($query);
-
-                return $query;
-            },
-        );
+        $record = $this->resolveRecordForGeneration($key);
 
         if ($record === null || ! $this->resource::canView($record)) {
             return null;
@@ -383,13 +243,12 @@ final class ResourceSource
     public function resolvePath(Model $record): string
     {
         $this->ensureValidRecord($record);
-        $resolver = $this->pathResolver;
 
-        if ($resolver === null) {
+        if ($this->pathResolver === null) {
             throw InvalidSourceConfiguration::missingPathResolver($this->resource);
         }
 
-        $path = $resolver($record);
+        $path = ($this->pathResolver)($record);
 
         if (
             ! is_string($path)
@@ -423,41 +282,7 @@ final class ResourceSource
         throw InvalidSourceConfiguration::invalidRecordTitle($this->resource, $title);
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function mapRecord(Model $record): array
-    {
-        $mapper = $this->mapper;
-
-        if ($mapper === null) {
-            throw InvalidSourceConfiguration::missingMapper($this->resource);
-        }
-
-        $this->ensureValidRecord($record);
-
-        $values = $mapper($record);
-
-        if (! is_array($values)) {
-            throw InvalidSourceConfiguration::invalidMappedResult($this->resource);
-        }
-
-        $mappedValues = [];
-
-        foreach ($values as $key => $value) {
-            if (! is_string($key)) {
-                throw InvalidSourceConfiguration::invalidMappedResult($this->resource);
-            }
-
-            $mappedValues[$key] = $value;
-        }
-
-        return $mappedValues;
-    }
-
-    /**
-     * @return array<int, string>
-     */
+    /** @return array<int, string> */
     private function getSearchColumns(): array
     {
         if ($this->configuredSearchColumns !== null) {
@@ -483,9 +308,7 @@ final class ResourceSource
         return $columns;
     }
 
-    /**
-     * @param  Builder<Model>  $query
-     */
+    /** @param Builder<Model> $query */
     private function applyQueryCallback(Builder $query): void
     {
         if ($this->queryCallback !== null) {

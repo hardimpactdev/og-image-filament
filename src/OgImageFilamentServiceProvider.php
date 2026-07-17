@@ -14,7 +14,7 @@ final class OgImageFilamentServiceProvider extends PackageServiceProvider
         $package
             ->name('og-image-filament')
             ->hasConfigFile()
-            ->hasMigration('create_og_image_filament_settings_table')
+            ->hasMigration('drop_og_image_filament_settings_table')
             ->runsMigrations()
             ->hasViews();
     }
