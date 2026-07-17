@@ -46,7 +46,6 @@
             <div
                 data-og-generator-layout
                 x-data="ogImageFilamentGenerator"
-                x-on:og-image-filament:generate.window="generate($event.detail.filename)"
                 style="display: grid; gap: 1.5rem; min-width: 0"
             >
                 <form wire:submit="generate" style="display: grid; gap: 1.5rem; min-width: 0">
@@ -54,19 +53,9 @@
 
                     <x-filament::button
                         type="submit"
-                        x-bind:disabled="generating"
-                        x-bind:aria-busy="generating"
                     >
-                        <span x-show="! generating">Generate OG image</span>
-                        <span x-cloak x-show="generating">Generating…</span>
+                        Generate OG image
                     </x-filament::button>
-
-                    <p
-                        x-cloak
-                        x-show="error"
-                        x-text="error"
-                        class="text-sm text-danger-600"
-                    ></p>
                 </form>
 
                 <aside class="min-w-0" style="min-width: 0; max-width: 100%">

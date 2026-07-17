@@ -14,6 +14,7 @@ use HardImpact\OgImageFilament\OgImageFilamentPlugin;
 use HardImpact\OgImageFilament\Properties\TextareaProperty;
 use HardImpact\OgImageFilament\Properties\TextProperty;
 use HardImpact\OgImageFilament\Properties\UrlProperty;
+use HardImpact\OgImageFilament\Sources\ModelValue;
 use HardImpact\OgImageFilament\Sources\ResourceSource;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -57,11 +58,17 @@ final class AdminPanelProvider extends PanelProvider
                     ])
                     ->sources([
                         ResourceSource::make(PostResource::class)
+                            ->pathUsing(fn (Post $post): string => "posts/{$post->id}.png")
+                            ->modelValues([
+                                ModelValue::make('public_url')
+                                    ->label('Public URL')
+                                    ->resolveUsing(fn (Post $post): string => url("/posts/{$post->slug}")),
+                            ])
                             ->defaultMappings([
                                 'label' => ['source' => 'static', 'value' => 'Post'],
                                 'title' => ['source' => 'column', 'value' => 'title'],
                                 'description' => ['source' => 'column', 'value' => 'summary'],
-                                'url' => ['source' => 'column', 'value' => 'slug'],
+                                'url' => ['source' => 'model_value', 'value' => 'public_url'],
                             ])
                             ->map(fn (Post $post): array => [
                                 'label' => 'Post',

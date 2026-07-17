@@ -8,11 +8,13 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Tabs;
 use HardImpact\OgImageFilament\Filament\Pages\OgImageGenerator;
+use HardImpact\OgImageFilament\Jobs\GenerateOgImage;
 use HardImpact\OgImageFilament\Models\OgImageSetting;
 use HardImpact\OgImageFilament\OgImageFilamentPlugin;
 use HardImpact\OgImageFilament\Settings\ConfigurationRepository;
 use HardImpact\OgImageFilament\Settings\SettingsForm;
 use HardImpact\OgImageFilament\Sources\ModelValue;
+use Illuminate\Support\Facades\Queue;
 use Livewire\LivewireManager;
 use Workbench\App\Filament\Resources\PostResource;
 use Workbench\App\Models\Post;
@@ -145,6 +147,39 @@ it('validates the configured dynamic properties before generation', function ():
         ->set('data.properties.title', '')
         ->call('generate')
         ->assertHasFormErrors(['properties.title' => 'required']);
+});
+
+it('queues manual generation with validated property overrides', function (): void {
+    Queue::fake();
+    $post = Post::query()->create([
+        'title' => 'Mapped title',
+        'slug' => 'mapped-title',
+        'summary' => 'Mapped summary',
+        'is_visible' => true,
+    ]);
+    $user = User::query()->create([
+        'name' => 'Admin',
+        'email' => 'admin@example.com',
+        'password' => 'password',
+    ]);
+
+    app(LivewireManager::class)->actingAs($user)
+        ->test(OgImageGenerator::class)
+        ->fillForm([
+            'source' => PostResource::class,
+            'entry' => $post->id,
+        ])
+        ->set('data.properties.title', 'Manual override')
+        ->call('generate')
+        ->assertNotified('OG image generation queued');
+
+    Queue::assertPushed(
+        GenerateOgImage::class,
+        fn (GenerateOgImage $job): bool => $job->panelId === 'admin'
+            && $job->source === PostResource::class
+            && $job->record === $post->getRouteKey()
+            && ($job->overrides['title'] ?? null) === 'Manual override',
+    );
 });
 
 it('shows PHP defaults in a same-page configuration tab', function (): void {
@@ -369,7 +404,9 @@ it('saves named model value mappings', function (): void {
         throw new LogicException('The test panel registered an unexpected OG image plugin.');
     }
 
-    $plugin->getSources()[PostResource::class]->modelValues([
+    $source = $plugin->getSources()[PostResource::class];
+    $source->modelValues([
+        ...array_values($source->getModelValues()),
         ModelValue::make('seo_title')
             ->label('SEO title')
             ->resolveUsing(fn (Post $post): string => "{$post->title} SEO"),

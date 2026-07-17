@@ -14,6 +14,7 @@ use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use HardImpact\OgImageFilament\Jobs\GenerateOgImage;
 use HardImpact\OgImageFilament\OgImageFilamentPlugin;
 use HardImpact\OgImageFilament\Properties\Property;
 use HardImpact\OgImageFilament\PropertyBag;
@@ -157,14 +158,29 @@ final class OgImageGenerator extends Page
     public function generate(): void
     {
         $state = $this->generatorForm()->getState();
+        $source = $state['source'] ?? null;
+        $entry = $state['entry'] ?? null;
         $properties = $state['properties'] ?? [];
-        $title = is_array($properties) ? ($properties['title'] ?? null) : null;
-        $filename = is_string($title) ? $title : 'OG image';
 
-        $this->dispatch(
-            'og-image-filament:generate',
-            filename: $filename,
-        );
+        if (
+            ! is_string($source)
+            || (! is_int($entry) && ! is_string($entry))
+            || ! is_array($properties)
+        ) {
+            throw new \LogicException('The validated OG image generator state is invalid.');
+        }
+
+        GenerateOgImage::dispatch(
+            panelId: $this->panelId(),
+            source: $source,
+            record: $entry,
+            overrides: $properties,
+        )->afterCommit();
+
+        Notification::make()
+            ->title('OG image generation queued')
+            ->success()
+            ->send();
     }
 
     public function saveSettings(): void

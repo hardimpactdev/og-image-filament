@@ -27,6 +27,8 @@ final class ResourceSource
 
     private ?Closure $mapper = null;
 
+    private ?Closure $pathResolver = null;
+
     /** @var array<string, array{source: string, value: string}> */
     private array $configuredDefaultMappings = [];
 
@@ -90,6 +92,13 @@ final class ResourceSource
     public function map(Closure $callback): self
     {
         $this->mapper = $callback;
+
+        return $this;
+    }
+
+    public function pathUsing(Closure $resolver): self
+    {
+        $this->pathResolver = $resolver;
 
         return $this;
     }
@@ -305,6 +314,42 @@ final class ResourceSource
         }
 
         return $record;
+    }
+
+    public function resolveRecordForGeneration(int|string $key): ?Model
+    {
+        return $this->resource::resolveRecordRouteBinding(
+            $key,
+            function (Builder $query): Builder {
+                $this->applyQueryCallback($query);
+
+                return $query;
+            },
+        );
+    }
+
+    public function resolvePath(Model $record): string
+    {
+        $this->ensureValidRecord($record);
+        $resolver = $this->pathResolver;
+
+        if ($resolver === null) {
+            throw InvalidSourceConfiguration::missingPathResolver($this->resource);
+        }
+
+        $path = $resolver($record);
+
+        if (
+            ! is_string($path)
+            || trim($path) === ''
+            || str_starts_with($path, '/')
+            || str_starts_with($path, '\\')
+            || str_contains($path, '..')
+        ) {
+            throw InvalidSourceConfiguration::invalidPath($this->resource, $path);
+        }
+
+        return trim($path);
     }
 
     public function getRecordTitle(Model $record): string

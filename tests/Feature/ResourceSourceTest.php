@@ -174,6 +174,23 @@ it('rejects duplicate named model values', function (): void {
     ]))->toThrow(InvalidSourceConfiguration::class);
 });
 
+it('resolves deterministic relative image paths', function (): void {
+    $post = Post::query()->create([
+        'title' => 'Path post',
+        'slug' => 'path-post',
+        'summary' => 'Summary',
+        'is_visible' => true,
+    ]);
+    $source = ResourceSource::make(PostResource::class)
+        ->pathUsing(fn (Post $post): string => "posts/{$post->id}.png");
+
+    expect($source->resolvePath($post))->toBe("posts/{$post->id}.png")
+        ->and(fn () => ResourceSource::make(PostResource::class)
+            ->pathUsing(fn (): string => '../outside.png')
+            ->resolvePath($post))
+        ->toThrow(InvalidSourceConfiguration::class);
+});
+
 it('rejects invalid serializable mappings', function (): void {
     expect(fn () => ResourceSource::make(PostResource::class)->defaultMappings([
         'title' => ['source' => 'computed', 'value' => 'title'],

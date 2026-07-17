@@ -77,6 +77,20 @@ final class InvalidSourceConfiguration extends InvalidArgumentException
         return new self("OG image model value [{$key}] must configure a resolver.");
     }
 
+    public static function missingPathResolver(string $resource): self
+    {
+        return new self("OG image source [{$resource}] must configure a deterministic path resolver.");
+    }
+
+    public static function invalidPath(string $resource, mixed $path): self
+    {
+        return new self(sprintf(
+            'The OG image path for source [%s] must be a non-empty relative path without traversal; [%s] was returned.',
+            $resource,
+            get_debug_type($path),
+        ));
+    }
+
     public static function invalidRecordTitle(string $resource, mixed $title): self
     {
         return new self(sprintf(
