@@ -22,6 +22,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Workbench\App\Data\PostOgImageData;
 use Workbench\App\Filament\Resources\PostResource;
 use Workbench\App\Models\Post;
 
@@ -58,6 +59,8 @@ final class AdminPanelProvider extends PanelProvider
                     ])
                     ->sources([
                         ResourceSource::make(PostResource::class)
+                            ->template('og-image-filament::card')
+                            ->dataUsing(fn (Post $post): PostOgImageData => PostOgImageData::from($post))
                             ->pathUsing(fn (Post $post): string => "posts/{$post->id}.png")
                             ->modelValues([
                                 ModelValue::make('public_url')

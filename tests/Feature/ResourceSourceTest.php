@@ -7,6 +7,7 @@ use HardImpact\OgImageFilament\Sources\ModelValue;
 use HardImpact\OgImageFilament\Sources\ResourceSource;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
+use Workbench\App\Data\PostOgImageData;
 use Workbench\App\Filament\Resources\PostResource;
 use Workbench\App\Models\Post;
 
@@ -29,15 +30,39 @@ it('uses Filament resource defaults for labels, searching, and titles', function
         ]);
 });
 
-it('resolves an optional resource template with a plugin fallback', function (): void {
-    $source = ResourceSource::make(PostResource::class);
+it('resolves the configured template and DTO data', function (): void {
+    $post = Post::query()->create([
+        'title' => 'DTO title',
+        'slug' => 'dto-title',
+        'summary' => 'Summary',
+        'is_visible' => true,
+    ]);
+    $source = ResourceSource::make(PostResource::class)
+        ->template('test-og-images::source-card')
+        ->dataUsing(fn (Post $post): PostOgImageData => PostOgImageData::from($post));
 
-    expect($source->resolveTemplate('og-image-filament::card'))
-        ->toBe('og-image-filament::card')
-        ->and($source->template('workbench::post-card')->resolveTemplate('og-image-filament::card'))
-        ->toBe('workbench::post-card')
+    expect($source->getTemplate())->toBe('test-og-images::source-card')
+        ->and($source->resolveData($post))->toEqual(new PostOgImageData('DTO title'));
+});
+
+it('requires a valid resource template and DTO resolver', function (): void {
+    $post = Post::query()->create([
+        'title' => 'Invalid DTO',
+        'slug' => 'invalid-dto',
+        'summary' => 'Summary',
+        'is_visible' => true,
+    ]);
+
+    expect(fn () => ResourceSource::make(PostResource::class)->getTemplate())
+        ->toThrow(InvalidSourceConfiguration::class, 'must configure a Blade view')
         ->and(fn () => ResourceSource::make(PostResource::class)->template('   '))
-        ->toThrow(InvalidSourceConfiguration::class, 'non-empty Blade view');
+        ->toThrow(InvalidSourceConfiguration::class, 'non-empty Blade view')
+        ->and(fn () => ResourceSource::make(PostResource::class)->resolveData($post))
+        ->toThrow(InvalidSourceConfiguration::class, 'must configure a data resolver')
+        ->and(fn () => ResourceSource::make(PostResource::class)
+            ->dataUsing(fn (Post $post): string => $post->title)
+            ->resolveData($post))
+        ->toThrow(InvalidSourceConfiguration::class, 'must return an object');
 });
 
 it('keeps resource and record authorization intact', function (): void {

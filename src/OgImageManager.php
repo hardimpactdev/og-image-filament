@@ -6,7 +6,6 @@ namespace HardImpact\OgImageFilament;
 
 use Filament\PanelRegistry;
 use HardImpact\OgImageFilament\Rendering\OgImageRenderer;
-use HardImpact\OgImageFilament\Settings\ConfigurationRepository;
 use HardImpact\OgImageFilament\Sources\ResourceSource;
 use HardImpact\OgImageFilament\Storage\GeneratedOgImages;
 use Illuminate\Database\Eloquent\Model;
@@ -15,17 +14,14 @@ use RuntimeException;
 final readonly class OgImageManager
 {
     public function __construct(
-        private ConfigurationRepository $configurations,
         private OgImageRenderer $renderer,
         private GeneratedOgImages $images,
     ) {}
 
-    /** @param null|array<array-key, mixed> $overrides */
     public function generate(
         string $panelId,
         string $source,
         int|string $record,
-        ?array $overrides = null,
     ): void {
         $plugin = $this->plugin($panelId);
         $resourceSource = $this->source($plugin, $source);
@@ -35,20 +31,9 @@ final readonly class OgImageManager
             throw new RuntimeException("OG image record [{$record}] for source [{$source}] no longer exists.");
         }
 
-        $configuration = $this->configurations->forPanel($panelId, $plugin);
-        $values = $configuration->mapRecord($resourceSource, $model);
-
-        if ($overrides !== null) {
-            $values = array_replace($values, $overrides);
-        }
-
-        $properties = PropertyBag::fromMapping(
-            array_values($configuration->properties),
-            $values,
-        );
         $png = $this->renderer->render(
-            $resourceSource->resolveTemplate($plugin->getTemplate()),
-            $properties,
+            $resourceSource->getTemplate(),
+            $resourceSource->resolveData($model),
         );
 
         $this->images->replace($resourceSource->resolvePath($model), $png);

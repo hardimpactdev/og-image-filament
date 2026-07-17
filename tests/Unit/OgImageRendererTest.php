@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-use HardImpact\OgImageFilament\Properties\TextProperty;
-use HardImpact\OgImageFilament\PropertyBag;
 use HardImpact\OgImageFilament\Rendering\OgImageRenderer;
 use Spatie\Browsershot\Browsershot;
+use Workbench\App\Data\PostOgImageData;
 
 it('renders a complete 1200 by 630 PNG document without launching Chrome', function (): void {
     config()->set('og-image-filament.node_binary', '/custom/node');
@@ -18,12 +17,12 @@ it('renders a complete 1200 by 630 PNG document without launching Chrome', funct
 
         return $browser;
     });
-    $properties = PropertyBag::fromMapping(
-        [TextProperty::make('title')->required()],
-        ['title' => 'Rendered title'],
-    );
+    view()->addNamespace('test-og-images', dirname(__DIR__).'/Fixtures/views');
 
-    expect($renderer->render('og-image-filament::card', $properties))->toBe('png-bytes')
+    expect($renderer->render(
+        'test-og-images::source-card',
+        new PostOgImageData('Rendered title'),
+    ))->toBe('png-bytes')
         ->and($html)->toContain('<!DOCTYPE html>')
         ->and($html)->toContain('Rendered title')
         ->and($browser->window)->toBe([1200, 630])

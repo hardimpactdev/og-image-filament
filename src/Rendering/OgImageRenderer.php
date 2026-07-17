@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace HardImpact\OgImageFilament\Rendering;
 
 use Closure;
-use HardImpact\OgImageFilament\PropertyBag;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use RuntimeException;
 use Spatie\Browsershot\Browsershot;
@@ -18,10 +17,10 @@ final readonly class OgImageRenderer
         private ?ViewFactory $viewFactory = null,
     ) {}
 
-    public function render(string $view, PropertyBag $properties): string
+    public function render(string $view, object $data): string
     {
         $viewFactory = $this->viewFactory ?? app(ViewFactory::class);
-        $card = $viewFactory->make($view, ['properties' => $properties])->render();
+        $card = $viewFactory->make($view, ['data' => $data])->render();
         $html = <<<HTML
             <!DOCTYPE html>
             <html lang="en">

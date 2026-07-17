@@ -27,6 +27,8 @@ final class ResourceSource
 
     private ?Closure $queryCallback = null;
 
+    private ?Closure $dataResolver = null;
+
     private ?Closure $mapper = null;
 
     private ?Closure $pathResolver = null;
@@ -67,6 +69,13 @@ final class ResourceSource
         }
 
         $this->configuredTemplate = $view;
+
+        return $this;
+    }
+
+    public function dataUsing(Closure $resolver): self
+    {
+        $this->dataResolver = $resolver;
 
         return $this;
     }
@@ -187,9 +196,32 @@ final class ResourceSource
         return $this->configuredLabel ?? $this->resource::getPluralModelLabel();
     }
 
+    public function getTemplate(): string
+    {
+        return $this->configuredTemplate
+            ?? throw InvalidSourceConfiguration::missingTemplate($this->resource);
+    }
+
     public function resolveTemplate(string $fallback): string
     {
         return $this->configuredTemplate ?? $fallback;
+    }
+
+    public function resolveData(Model $record): object
+    {
+        $this->ensureValidRecord($record);
+
+        if ($this->dataResolver === null) {
+            throw InvalidSourceConfiguration::missingDataResolver($this->resource);
+        }
+
+        $data = ($this->dataResolver)($record);
+
+        if (! is_object($data)) {
+            throw InvalidSourceConfiguration::invalidData($this->resource, $data);
+        }
+
+        return $data;
     }
 
     /**

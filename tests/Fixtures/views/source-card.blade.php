@@ -1,1 +1,1 @@
-<article data-og-card>source-template: {{ $properties->string('title') }}</article>
+<article data-og-card>source-template: {{ $data->title }}</article>

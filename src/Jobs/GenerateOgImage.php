@@ -30,7 +30,6 @@ final class GenerateOgImage implements ShouldQueue
             panelId: $this->panelId,
             source: $this->source,
             record: $this->record,
-            overrides: $this->overrides,
         );
     }
 }

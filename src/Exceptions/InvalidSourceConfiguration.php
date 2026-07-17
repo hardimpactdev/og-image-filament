@@ -23,6 +23,25 @@ final class InvalidSourceConfiguration extends InvalidArgumentException
         return new self("OG image source [{$resource}] must configure a non-empty Blade view.");
     }
 
+    public static function missingTemplate(string $resource): self
+    {
+        return new self("OG image source [{$resource}] must configure a Blade view.");
+    }
+
+    public static function missingDataResolver(string $resource): self
+    {
+        return new self("OG image source [{$resource}] must configure a data resolver.");
+    }
+
+    public static function invalidData(string $resource, mixed $data): self
+    {
+        return new self(sprintf(
+            'The data resolver for OG image source [%s] must return an object; [%s] was returned.',
+            $resource,
+            get_debug_type($data),
+        ));
+    }
+
     public static function missingSearchColumns(string $resource): self
     {
         return new self("OG image source [{$resource}] has no globally searchable or record-title attributes; configure search columns explicitly.");
