@@ -18,6 +18,8 @@ final class ResourceSource
 {
     private ?string $configuredLabel = null;
 
+    private ?string $configuredTemplate = null;
+
     /** @var ?array<int, string> */
     private ?array $configuredSearchColumns = null;
 
@@ -52,6 +54,19 @@ final class ResourceSource
     public function label(string $label): self
     {
         $this->configuredLabel = $label;
+
+        return $this;
+    }
+
+    public function template(string $view): self
+    {
+        $view = trim($view);
+
+        if ($view === '') {
+            throw InvalidSourceConfiguration::invalidTemplate($this->resource);
+        }
+
+        $this->configuredTemplate = $view;
 
         return $this;
     }
@@ -170,6 +185,11 @@ final class ResourceSource
     public function getLabel(): string
     {
         return $this->configuredLabel ?? $this->resource::getPluralModelLabel();
+    }
+
+    public function resolveTemplate(string $fallback): string
+    {
+        return $this->configuredTemplate ?? $fallback;
     }
 
     /**

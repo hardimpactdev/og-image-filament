@@ -29,6 +29,17 @@ it('uses Filament resource defaults for labels, searching, and titles', function
         ]);
 });
 
+it('resolves an optional resource template with a plugin fallback', function (): void {
+    $source = ResourceSource::make(PostResource::class);
+
+    expect($source->resolveTemplate('og-image-filament::card'))
+        ->toBe('og-image-filament::card')
+        ->and($source->template('workbench::post-card')->resolveTemplate('og-image-filament::card'))
+        ->toBe('workbench::post-card')
+        ->and(fn () => ResourceSource::make(PostResource::class)->template('   '))
+        ->toThrow(InvalidSourceConfiguration::class, 'non-empty Blade view');
+});
+
 it('keeps resource and record authorization intact', function (): void {
     $visible = Post::query()->create([
         'title' => 'Visible post',

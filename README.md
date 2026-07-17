@@ -38,6 +38,7 @@ public function panel(Panel $panel): Panel
                 ])
                 ->sources([
                     ResourceSource::make(ArticleResource::class)
+                        ->template('og-images.articles')
                         ->defaultMappings([
                             'label' => ['source' => 'static', 'value' => 'Article'],
                             'title' => ['source' => 'column', 'value' => 'title'],
@@ -49,7 +50,9 @@ public function panel(Panel $panel): Panel
 }
 ```
 
-The PHP definitions are used until the first configuration save. After that, the database row for the panel takes precedence.
+The plugin template remains the fallback for every source. Call `template()` on a resource source when that resource should render a different Blade view. PHP source templates are not stored in the editable database configuration.
+
+The PHP property and mapping definitions are used until the first configuration save. After that, the database row for the panel takes precedence.
 
 Open the **Configure** tab on the OG image generator page to:
 
