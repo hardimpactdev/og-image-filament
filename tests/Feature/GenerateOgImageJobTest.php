@@ -46,6 +46,36 @@ it('reloads current model values and writes the deterministic path', function ()
         ->toEndWith("/storage/{$path}");
 });
 
+it('renders the template configured for the resource source', function (): void {
+    $post = Post::query()->create([
+        'title' => 'Source-specific title',
+        'slug' => 'source-specific-title',
+        'summary' => 'Summary',
+        'is_visible' => true,
+    ]);
+    view()->addNamespace('test-og-images', dirname(__DIR__).'/Fixtures/views');
+    registerPostPath();
+
+    $plugin = Filament::getDefaultPanel()->getPlugin('og-image-filament');
+
+    if (! $plugin instanceof OgImageFilamentPlugin) {
+        throw new LogicException('The test panel registered an unexpected OG image plugin.');
+    }
+
+    $plugin->getSources()[PostResource::class]
+        ->template('test-og-images::source-card');
+    app()->instance(
+        OgImageRenderer::class,
+        new OgImageRenderer(fn (string $html): Browsershot => new JobBrowsershot($html)),
+    );
+
+    (new GenerateOgImage('admin', PostResource::class, $post->id))
+        ->handle(resolve(OgImageManager::class));
+
+    expect(Storage::disk('public')->get("og-images/posts/{$post->id}.png"))
+        ->toContain('source-template: Source-specific title');
+});
+
 it('keeps the last good image when rendering fails', function (): void {
     $post = Post::query()->create([
         'title' => 'Stable title',

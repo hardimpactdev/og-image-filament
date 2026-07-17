@@ -46,7 +46,10 @@ final readonly class OgImageManager
             array_values($configuration->properties),
             $values,
         );
-        $png = $this->renderer->render($plugin->getTemplate(), $properties);
+        $png = $this->renderer->render(
+            $resourceSource->resolveTemplate($plugin->getTemplate()),
+            $properties,
+        );
 
         $this->images->replace($resourceSource->resolvePath($model), $png);
     }
