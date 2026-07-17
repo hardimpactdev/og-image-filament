@@ -55,6 +55,7 @@ final readonly class OgImageConfiguration
 
             $value = match ($sourceType) {
                 MappingSource::Column => $record->getAttribute($mapping['value']),
+                MappingSource::ModelValue => $source->resolveModelValue($mapping['value'], $record),
                 MappingSource::StaticText => $mapping['value'],
                 null => null,
             };

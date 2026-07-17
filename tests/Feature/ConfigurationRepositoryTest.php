@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
+use Filament\Resources\Resource;
 use HardImpact\OgImageFilament\Exceptions\InvalidSettings;
 use HardImpact\OgImageFilament\Models\OgImageSetting;
 use HardImpact\OgImageFilament\OgImageFilamentPlugin;
 use HardImpact\OgImageFilament\Properties\TextProperty;
 use HardImpact\OgImageFilament\Settings\ConfigurationRepository;
+use HardImpact\OgImageFilament\Sources\ModelValue;
 use HardImpact\OgImageFilament\Sources\ResourceSource;
 use Workbench\App\Filament\Resources\PostResource;
 use Workbench\App\Models\Post;
@@ -130,6 +132,85 @@ it('maps column and static values without fallbacks', function (): void {
     expect($configuration->mapRecord($source, $post)['description'])->toBeNull();
 });
 
+it('maps named model values', function (): void {
+    $post = Post::query()->create([
+        'title' => 'Mapped title',
+        'slug' => 'mapped-title',
+        'summary' => 'Mapped summary',
+        'is_visible' => true,
+    ]);
+    $source = ResourceSource::make(PostResource::class)
+        ->modelValues([
+            ModelValue::make('seo_title')
+                ->label('SEO title')
+                ->resolveUsing(fn (Post $post): string => "{$post->title} SEO"),
+        ]);
+    $plugin = OgImageFilamentPlugin::make()
+        ->properties([TextProperty::make('title')])
+        ->sources([$source]);
+    $configuration = resolve(ConfigurationRepository::class)->save(
+        panelId: 'admin',
+        propertyDefinitions: [[
+            'key' => 'title',
+            'label' => 'Title',
+            'type' => 'text',
+            'required' => false,
+            'max_length' => null,
+        ]],
+        mappings: [
+            PostResource::class => [
+                'title' => ['source' => 'model_value', 'value' => 'seo_title'],
+            ],
+        ],
+        plugin: $plugin,
+    );
+
+    expect($configuration->mapRecord($source, $post))->toBe([
+        'title' => 'Mapped title SEO',
+    ]);
+});
+
+it('keeps saved mappings while adding defaults for new sources', function (): void {
+    $repository = resolve(ConfigurationRepository::class);
+    $repository->save(
+        panelId: 'admin',
+        propertyDefinitions: [[
+            'key' => 'title',
+            'label' => 'Title',
+            'type' => 'text',
+            'required' => false,
+            'max_length' => null,
+        ]],
+        mappings: [
+            PostResource::class => [
+                'title' => ['source' => 'static', 'value' => 'Saved article title'],
+            ],
+        ],
+        plugin: configurationPlugin(),
+    );
+    $expandedPlugin = OgImageFilamentPlugin::make()
+        ->properties([TextProperty::make('title')])
+        ->sources([
+            ResourceSource::make(PostResource::class)
+                ->defaultMappings([
+                    'title' => ['source' => 'column', 'value' => 'title'],
+                ]),
+            ResourceSource::make(TestPageResource::class)
+                ->defaultMappings([
+                    'title' => ['source' => 'static', 'value' => 'Page title'],
+                ]),
+        ]);
+
+    expect($repository->forPanel('admin', $expandedPlugin)->mappings)->toBe([
+        PostResource::class => [
+            'title' => ['source' => 'static', 'value' => 'Saved article title'],
+        ],
+        TestPageResource::class => [
+            'title' => ['source' => 'static', 'value' => 'Page title'],
+        ],
+    ]);
+});
+
 it('removes stale mappings and rejects unknown model columns', function (): void {
     $repository = resolve(ConfigurationRepository::class);
     $configuration = $repository->save(
@@ -176,3 +257,38 @@ it('removes stale mappings and rejects unknown model columns', function (): void
         plugin: configurationPlugin(),
     ))->toThrow(InvalidSettings::class);
 });
+
+it('rejects unknown named model values', function (): void {
+    $plugin = OgImageFilamentPlugin::make()
+        ->properties([TextProperty::make('title')])
+        ->sources([
+            ResourceSource::make(PostResource::class)
+                ->modelValues([
+                    ModelValue::make('seo_title')
+                        ->resolveUsing(fn (Post $post): string => $post->title),
+                ]),
+        ]);
+
+    expect(fn () => resolve(ConfigurationRepository::class)->save(
+        panelId: 'admin',
+        propertyDefinitions: [[
+            'key' => 'title',
+            'label' => 'Title',
+            'type' => 'text',
+            'required' => false,
+            'max_length' => null,
+        ]],
+        mappings: [
+            PostResource::class => [
+                'title' => ['source' => 'model_value', 'value' => 'missing_value'],
+            ],
+        ],
+        plugin: $plugin,
+    ))->toThrow(InvalidSettings::class);
+});
+
+/** @extends resource<Post> */
+final class TestPageResource extends Resource
+{
+    protected static ?string $model = Post::class;
+}

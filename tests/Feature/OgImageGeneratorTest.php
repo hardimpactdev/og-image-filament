@@ -12,6 +12,7 @@ use HardImpact\OgImageFilament\Models\OgImageSetting;
 use HardImpact\OgImageFilament\OgImageFilamentPlugin;
 use HardImpact\OgImageFilament\Settings\ConfigurationRepository;
 use HardImpact\OgImageFilament\Settings\SettingsForm;
+use HardImpact\OgImageFilament\Sources\ModelValue;
 use Livewire\LivewireManager;
 use Workbench\App\Filament\Resources\PostResource;
 use Workbench\App\Models\Post;
@@ -352,6 +353,55 @@ it('saves visual property and resource mapping configuration', function (): void
         PostResource::class => [
             'headline' => ['source' => 'column', 'value' => 'title'],
             'eyebrow' => ['source' => 'static', 'value' => 'Article'],
+        ],
+    ]);
+});
+
+it('saves named model value mappings', function (): void {
+    $user = User::query()->create([
+        'name' => 'Admin',
+        'email' => 'admin@example.com',
+        'password' => 'password',
+    ]);
+    $plugin = Filament::getDefaultPanel()->getPlugin('og-image-filament');
+
+    if (! $plugin instanceof OgImageFilamentPlugin) {
+        throw new LogicException('The test panel registered an unexpected OG image plugin.');
+    }
+
+    $plugin->getSources()[PostResource::class]->modelValues([
+        ModelValue::make('seo_title')
+            ->label('SEO title')
+            ->resolveUsing(fn (Post $post): string => "{$post->title} SEO"),
+    ]);
+
+    app(LivewireManager::class)->actingAs($user)
+        ->test(OgImageGenerator::class)
+        ->fillForm([
+            'properties' => [[
+                'key' => 'title',
+                'label' => 'Title',
+                'type' => 'text',
+                'required' => true,
+                'max_length' => 180,
+            ]],
+            'mappings' => [
+                SettingsForm::resourceStateKey(PostResource::class) => [
+                    'title' => [
+                        'source' => 'model_value',
+                        'column' => null,
+                        'model_value' => 'seo_title',
+                        'static' => null,
+                    ],
+                ],
+            ],
+        ], 'settingsForm')
+        ->call('saveSettings')
+        ->assertNotified('OG image configuration saved');
+
+    expect(OgImageSetting::query()->where('panel_id', 'admin')->firstOrFail()->mappings)->toBe([
+        PostResource::class => [
+            'title' => ['source' => 'model_value', 'value' => 'seo_title'],
         ],
     ]);
 });

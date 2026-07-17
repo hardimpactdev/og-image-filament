@@ -52,6 +52,31 @@ final class InvalidSourceConfiguration extends InvalidArgumentException
         return new self("The default mapping for OG image property [{$property}] on source [{$resource}] references unknown column [{$column}].");
     }
 
+    public static function invalidModelValueKey(string $key): self
+    {
+        return new self("OG image model value key [{$key}] must use lower snake case.");
+    }
+
+    public static function invalidModelValueLabel(string $key): self
+    {
+        return new self("OG image model value [{$key}] must have a non-empty label.");
+    }
+
+    public static function duplicateModelValue(string $resource, string $key): self
+    {
+        return new self("OG image source [{$resource}] registers model value [{$key}] more than once.");
+    }
+
+    public static function unknownModelValue(string $resource, string $key): self
+    {
+        return new self("OG image source [{$resource}] does not register model value [{$key}].");
+    }
+
+    public static function missingModelValueResolver(string $key): self
+    {
+        return new self("OG image model value [{$key}] must configure a resolver.");
+    }
+
     public static function invalidRecordTitle(string $resource, mixed $title): self
     {
         return new self(sprintf(

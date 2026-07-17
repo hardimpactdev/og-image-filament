@@ -32,7 +32,10 @@ final class ConfigurationRepository
         return new OgImageConfiguration(
             properties: $properties,
             mappings: $this->normalizeMappings(
-                mappings: $setting->mappings,
+                mappings: array_replace_recursive(
+                    $this->defaultMappings($plugin),
+                    $setting->mappings,
+                ),
                 properties: $properties,
                 plugin: $plugin,
             ),
@@ -136,6 +139,7 @@ final class ConfigurationRepository
     ): array {
         $normalizedMappings = [];
         $columns = $source->getModelColumns();
+        $modelValues = $source->getModelValues();
 
         foreach ($properties as $key => $property) {
             $mapping = $resourceMappings[$key] ?? null;
@@ -162,6 +166,10 @@ final class ConfigurationRepository
 
             if ($mappingSource === MappingSource::Column && ! array_key_exists($value, $columns)) {
                 throw InvalidSettings::unknownColumn($source->getKey(), $property->key, $value);
+            }
+
+            if ($mappingSource === MappingSource::ModelValue && ! array_key_exists($value, $modelValues)) {
+                throw InvalidSettings::unknownModelValue($source->getKey(), $property->key, $value);
             }
 
             $normalizedMappings[$key] = [

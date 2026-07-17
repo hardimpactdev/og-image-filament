@@ -30,6 +30,9 @@ final class ResourceSource
     /** @var array<string, array{source: string, value: string}> */
     private array $configuredDefaultMappings = [];
 
+    /** @var array<string, ModelValue> */
+    private array $configuredModelValues = [];
+
     /**
      * @param  class-string<resource>  $resource
      */
@@ -91,6 +94,24 @@ final class ResourceSource
         return $this;
     }
 
+    /** @param array<int, ModelValue> $values */
+    public function modelValues(array $values): self
+    {
+        $modelValues = [];
+
+        foreach ($values as $value) {
+            if (array_key_exists($value->key, $modelValues)) {
+                throw InvalidSourceConfiguration::duplicateModelValue($this->resource, $value->key);
+            }
+
+            $modelValues[$value->key] = $value;
+        }
+
+        $this->configuredModelValues = $modelValues;
+
+        return $this;
+    }
+
     public function hasMapper(): bool
     {
         return $this->mapper !== null;
@@ -148,6 +169,37 @@ final class ResourceSource
     public function getDefaultMappings(): array
     {
         return $this->configuredDefaultMappings;
+    }
+
+    /** @return array<string, ModelValue> */
+    public function getModelValues(): array
+    {
+        return $this->configuredModelValues;
+    }
+
+    /** @return array<string, string> */
+    public function getModelValueOptions(): array
+    {
+        $options = [];
+
+        foreach ($this->configuredModelValues as $key => $value) {
+            $options[$key] = $value->getLabel();
+        }
+
+        return $options;
+    }
+
+    public function resolveModelValue(string $key, Model $record): mixed
+    {
+        $this->ensureValidRecord($record);
+
+        $value = $this->configuredModelValues[$key] ?? null;
+
+        if ($value === null) {
+            throw InvalidSourceConfiguration::unknownModelValue($this->resource, $key);
+        }
+
+        return $value->resolve($record);
     }
 
     /**
@@ -257,11 +309,7 @@ final class ResourceSource
 
     public function getRecordTitle(Model $record): string
     {
-        $model = $this->resource::getModel();
-
-        if (! $record instanceof $model) {
-            throw InvalidSourceConfiguration::invalidRecord($this->resource, $record);
-        }
+        $this->ensureValidRecord($record);
 
         $title = $this->recordTitleCallback === null
             ? $this->resource::getRecordTitle($record)
@@ -283,17 +331,15 @@ final class ResourceSource
      */
     public function mapRecord(Model $record): array
     {
-        if ($this->mapper === null) {
+        $mapper = $this->mapper;
+
+        if ($mapper === null) {
             throw InvalidSourceConfiguration::missingMapper($this->resource);
         }
 
-        $model = $this->resource::getModel();
+        $this->ensureValidRecord($record);
 
-        if (! $record instanceof $model) {
-            throw InvalidSourceConfiguration::invalidRecord($this->resource, $record);
-        }
-
-        $values = ($this->mapper)($record);
+        $values = $mapper($record);
 
         if (! is_array($values)) {
             throw InvalidSourceConfiguration::invalidMappedResult($this->resource);
@@ -347,6 +393,15 @@ final class ResourceSource
     {
         if ($this->queryCallback !== null) {
             ($this->queryCallback)($query);
+        }
+    }
+
+    private function ensureValidRecord(Model $record): void
+    {
+        $model = $this->resource::getModel();
+
+        if (! $record instanceof $model) {
+            throw InvalidSourceConfiguration::invalidRecord($this->resource, $record);
         }
     }
 }

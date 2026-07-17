@@ -22,4 +22,9 @@ final class InvalidSettings extends InvalidArgumentException
     {
         return new self("The OG image mapping for property [{$property}] on resource [{$resource}] references unknown column [{$column}].");
     }
+
+    public static function unknownModelValue(string $resource, string $property, string $value): self
+    {
+        return new self("The OG image mapping for property [{$property}] on resource [{$resource}] references unknown model value [{$value}].");
+    }
 }

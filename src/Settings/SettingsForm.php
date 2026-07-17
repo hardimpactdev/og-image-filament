@@ -95,6 +95,7 @@ final readonly class SettingsForm
      *     mappings: array<string, array<string, array{
      *         source: string,
      *         column: ?string,
+     *         model_value: ?string,
      *         static: ?string
      *     }>>
      * }
@@ -112,6 +113,7 @@ final readonly class SettingsForm
                 $mappings[$resourceKey][$key] = [
                     'source' => $source->value,
                     'column' => $source === MappingSource::Column ? $mapping['value'] : null,
+                    'model_value' => $source === MappingSource::ModelValue ? $mapping['value'] : null,
                     'static' => $source === MappingSource::StaticText ? $mapping['value'] : null,
                 ];
             }
@@ -155,6 +157,7 @@ final readonly class SettingsForm
 
                 $value = match ($sourceType) {
                     MappingSource::Column => $mapping['column'] ?? null,
+                    MappingSource::ModelValue => $mapping['model_value'] ?? null,
                     MappingSource::StaticText => $mapping['static'] ?? null,
                 };
 
@@ -210,6 +213,7 @@ final readonly class SettingsForm
                         ->label('Source')
                         ->options([
                             MappingSource::Column->value => 'Model column',
+                            MappingSource::ModelValue->value => 'Model value',
                             MappingSource::StaticText->value => 'Static text',
                         ])
                         ->placeholder('None')
@@ -219,6 +223,12 @@ final readonly class SettingsForm
                         ->searchable()
                         ->required(fn (Get $get): bool => $get('source') === MappingSource::Column->value)
                         ->visible(fn (Get $get): bool => $get('source') === MappingSource::Column->value),
+                    Select::make('model_value')
+                        ->label('Value')
+                        ->options($source->getModelValueOptions())
+                        ->searchable()
+                        ->required(fn (Get $get): bool => $get('source') === MappingSource::ModelValue->value)
+                        ->visible(fn (Get $get): bool => $get('source') === MappingSource::ModelValue->value),
                     TextInput::make('static')
                         ->label('Static text')
                         ->required(fn (Get $get): bool => $get('source') === MappingSource::StaticText->value)

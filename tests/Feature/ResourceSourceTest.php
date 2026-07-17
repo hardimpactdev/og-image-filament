@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use HardImpact\OgImageFilament\Exceptions\InvalidSourceConfiguration;
+use HardImpact\OgImageFilament\Sources\ModelValue;
 use HardImpact\OgImageFilament\Sources\ResourceSource;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
@@ -145,6 +146,32 @@ it('stores serializable default mappings', function (): void {
         'label' => ['source' => 'static', 'value' => 'Post'],
         'title' => ['source' => 'column', 'value' => 'title'],
     ]);
+});
+
+it('registers and resolves named model values', function (): void {
+    $post = Post::query()->create([
+        'title' => 'Named value',
+        'slug' => 'named-value',
+        'summary' => 'Summary',
+        'is_visible' => true,
+    ]);
+    $source = ResourceSource::make(PostResource::class)
+        ->modelValues([
+            ModelValue::make('seo_title')
+                ->label('SEO title')
+                ->resolveUsing(fn (Post $post): string => "{$post->title} SEO"),
+        ]);
+
+    expect($source->getModelValueOptions())->toBe([
+        'seo_title' => 'SEO title',
+    ])->and($source->resolveModelValue('seo_title', $post))->toBe('Named value SEO');
+});
+
+it('rejects duplicate named model values', function (): void {
+    expect(fn () => ResourceSource::make(PostResource::class)->modelValues([
+        ModelValue::make('seo_title')->resolveUsing(fn (Post $post): string => $post->title),
+        ModelValue::make('seo_title')->resolveUsing(fn (Post $post): string => $post->title),
+    ]))->toThrow(InvalidSourceConfiguration::class);
 });
 
 it('rejects invalid serializable mappings', function (): void {
