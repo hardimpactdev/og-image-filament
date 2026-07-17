@@ -1,21 +1,21 @@
 <article
     data-og-card
-    data-og-title="{{ $properties->has('title') ? $properties->string('title') : '' }}"
+    data-og-title="{{ $data->title ?? '' }}"
     style="width: 1200px; height: 630px;"
 >
-    @if ($properties->has('label'))
-        <p>{{ $properties->string('label') }}</p>
+    @if (isset($data->label))
+        <p>{{ $data->label }}</p>
     @endif
 
-    @if ($properties->has('title'))
-        <h1>{{ $properties->string('title') }}</h1>
+    @if (isset($data->title))
+        <h1>{{ $data->title }}</h1>
     @endif
 
-    @if ($properties->has('description') && $properties->filled('description'))
-        <p>{{ $properties->string('description') }}</p>
+    @if (isset($data->description) && filled($data->description))
+        <p>{{ $data->description }}</p>
     @endif
 
-    @if ($properties->has('url') && $properties->filled('url'))
-        <p>{{ $properties->string('url') }}</p>
+    @if (isset($data->url) && filled($data->url))
+        <p>{{ $data->url }}</p>
     @endif
 </article>

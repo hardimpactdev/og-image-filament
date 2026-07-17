@@ -1,80 +1,54 @@
 <x-filament-panels::page>
-    <div data-og-workflow style="display: grid; gap: 2rem">
-        <x-filament::tabs label="OG image workflow">
-            <x-filament::tabs.item
-                :active="$activeTab === 'generate'"
-                wire:click="$set('activeTab', 'generate')"
-            >
-                Generate
-            </x-filament::tabs.item>
+    @php($preview = $this->preview())
 
-            <x-filament::tabs.item
-                :active="$activeTab === 'configure'"
-                wire:click="$set('activeTab', 'configure')"
-            >
-                Configure
-            </x-filament::tabs.item>
-        </x-filament::tabs>
-
+    <div data-og-workflow style="display: grid; gap: 2rem; min-width: 0">
         <style>
-            [data-og-resource-tabs] > .fi-tabs.fi-vertical {
-                border-block: 0;
-                border-inline-end: 1px solid rgb(229 231 235);
-                border-start-end-radius: 0;
-                border-end-end-radius: 0;
-                background: transparent;
-                box-shadow: none;
-                padding: 1.5rem;
-            }
-
-            [data-og-resource-mapping] {
-                padding-block: 1.5rem;
-            }
-
-            .dark [data-og-resource-tabs] > .fi-tabs.fi-vertical {
-                border-inline-end-color: rgb(255 255 255 / 0.1);
-            }
-
             @media (min-width: 80rem) {
-                [data-og-generator-layout] {
+                [data-og-generator-layout][data-has-preview] {
                     grid-template-columns: minmax(20rem, 0.75fr) minmax(36rem, 1.25fr);
                 }
             }
         </style>
 
-        @if ($activeTab === 'generate')
-            <div
-                data-og-generator-layout
-                x-data="{
-                    previewHeight: 630,
-                    previewObserver: null,
-                    previewScale: 1,
-                    init() {
-                        this.previewObserver = new ResizeObserver(() => this.syncPreview())
-                        this.previewObserver.observe(this.$refs.previewFrame)
-                        this.$nextTick(() => this.syncPreview())
-                    },
-                    destroy() {
-                        this.previewObserver?.disconnect()
-                    },
-                    syncPreview() {
-                        this.previewScale = Math.min(1, this.$refs.previewFrame.clientWidth / 1200)
-                        this.previewHeight = 630 * this.previewScale
-                    },
-                }"
-                style="display: grid; gap: 1.5rem; min-width: 0"
-            >
-                <form wire:submit="generate" style="display: grid; gap: 1.5rem; min-width: 0">
-                    {{ $this->form }}
+        <div
+            data-og-generator-layout
+            @if ($preview !== null) data-has-preview @endif
+            style="display: grid; gap: 1.5rem; min-width: 0"
+        >
+            <form wire:submit="regenerate" style="display: grid; align-content: start; gap: 1.5rem; min-width: 0">
+                {{ $this->form }}
 
-                    <x-filament::button
-                        type="submit"
-                    >
-                        Generate OG image
-                    </x-filament::button>
-                </form>
+                @if ($preview !== null)
+                    <div>
+                        <x-filament::button type="submit">
+                            Regenerate OG image
+                        </x-filament::button>
+                    </div>
+                @endif
+            </form>
 
-                <aside class="min-w-0" style="min-width: 0; max-width: 100%">
+            @if ($preview !== null)
+                <aside
+                    class="min-w-0"
+                    x-data="{
+                        previewHeight: 630,
+                        previewObserver: null,
+                        previewScale: 1,
+                        init() {
+                            this.previewObserver = new ResizeObserver(() => this.syncPreview())
+                            this.previewObserver.observe(this.$refs.previewFrame)
+                            this.$nextTick(() => this.syncPreview())
+                        },
+                        destroy() {
+                            this.previewObserver?.disconnect()
+                        },
+                        syncPreview() {
+                            this.previewScale = Math.min(1, this.$refs.previewFrame.clientWidth / 1200)
+                            this.previewHeight = 630 * this.previewScale
+                        },
+                    }"
+                    style="min-width: 0; max-width: 100%"
+                >
                     <div class="rounded-xl border border-gray-200 bg-gray-100 p-4 dark:border-white/10 dark:bg-white/5" style="max-width: 100%; overflow: hidden">
                         <div
                             data-og-preview-frame
@@ -87,25 +61,12 @@
                                 class="w-max shadow-xl"
                                 x-bind:style="`width: 1200px; transform: scale(${previewScale}); transform-origin: top left`"
                             >
-                            @include(
-                                $this->previewTemplate(),
-                                ['properties' => $this->previewProperties()]
-                            )
+                                @include($preview['template'], ['data' => $preview['data']])
                             </div>
                         </div>
                     </div>
                 </aside>
-            </div>
-        @else
-            <form wire:submit="saveSettings" style="display: grid; gap: 2rem">
-                {{ $this->settingsForm }}
-
-                <div class="flex justify-end">
-                    <x-filament::button type="submit">
-                        Save configuration
-                    </x-filament::button>
-                </div>
-            </form>
-        @endif
+            @endif
+        </div>
     </div>
 </x-filament-panels::page>
