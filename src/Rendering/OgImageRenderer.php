@@ -6,18 +6,22 @@ namespace HardImpact\OgImageFilament\Rendering;
 
 use Closure;
 use HardImpact\OgImageFilament\PropertyBag;
+use Illuminate\Contracts\View\Factory as ViewFactory;
 use RuntimeException;
 use Spatie\Browsershot\Browsershot;
 
 final readonly class OgImageRenderer
 {
     /** @param null|Closure(string): Browsershot $browsershotFactory */
-    public function __construct(private ?Closure $browsershotFactory = null) {}
+    public function __construct(
+        private ?Closure $browsershotFactory = null,
+        private ?ViewFactory $viewFactory = null,
+    ) {}
 
-    /** @param view-string $view */
     public function render(string $view, PropertyBag $properties): string
     {
-        $card = view($view, ['properties' => $properties])->render();
+        $viewFactory = $this->viewFactory ?? app(ViewFactory::class);
+        $card = $viewFactory->make($view, ['properties' => $properties])->render();
         $html = <<<HTML
             <!DOCTYPE html>
             <html lang="en">

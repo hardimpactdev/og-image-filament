@@ -16,7 +16,6 @@ use UnitEnum;
 
 final class OgImageFilamentPlugin implements Plugin
 {
-    /** @var view-string */
     private string $template = 'og-image-filament::card';
 
     /** @var array<int, mixed> */
@@ -67,7 +66,6 @@ final class OgImageFilamentPlugin implements Plugin
 
     public function boot(Panel $panel): void {}
 
-    /** @param view-string $view */
     public function template(string $view): self
     {
         $this->template = $view;
@@ -130,7 +128,6 @@ final class OgImageFilamentPlugin implements Plugin
         return $this;
     }
 
-    /** @return view-string */
     public function getTemplate(): string
     {
         if (trim($this->template) === '') {
