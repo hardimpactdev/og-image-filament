@@ -12,26 +12,8 @@ type RenderCard = (
     },
 ) => Promise<string>;
 
-interface AlpineLike {
-    data(name: string, callback: () => unknown): void;
-}
-
-interface GeneratorState {
-    $root: HTMLElement;
-    generating: boolean;
-    error: string | null;
-    previewHeight: number;
-    previewObserver: ResizeObserver | null;
-    previewScale: number;
-    destroy(): void;
-    generate(filename?: string): Promise<void>;
-    init(): void;
-    syncPreview(): void;
-}
-
 declare global {
     interface Window {
-        Alpine?: AlpineLike;
         OgImageFilament?: {
             createOgImageDataUrl: typeof createOgImageDataUrl;
             downloadOgImage: typeof downloadOgImage;
@@ -141,69 +123,6 @@ export function downloadOgImage(dataUrl: string, title: string): void {
     window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
 }
 
-let alpineGeneratorRegistered = false;
-
-function registerAlpineGenerator(): void {
-    if (window.Alpine === undefined || alpineGeneratorRegistered) {
-        return;
-    }
-
-    alpineGeneratorRegistered = true;
-
-    window.Alpine.data('ogImageFilamentGenerator', () => ({
-        generating: false,
-        error: null,
-        previewHeight: 630,
-        previewObserver: null,
-        previewScale: 1,
-
-        init(this: GeneratorState): void {
-            this.previewObserver = new ResizeObserver(() => this.syncPreview());
-
-            const previewFrame = this.$root.querySelector<HTMLElement>('[data-og-preview-frame]');
-
-            if (previewFrame === null) {
-                return;
-            }
-
-            this.previewObserver.observe(previewFrame);
-            window.requestAnimationFrame(() => this.syncPreview());
-        },
-
-        destroy(this: GeneratorState): void {
-            this.previewObserver?.disconnect();
-        },
-
-        syncPreview(this: GeneratorState): void {
-            const previewFrame = this.$root.querySelector<HTMLElement>('[data-og-preview-frame]');
-
-            if (previewFrame === null) {
-                return;
-            }
-
-            this.previewScale = Math.min(1, previewFrame.clientWidth / 1200);
-            this.previewHeight = 630 * this.previewScale;
-        },
-
-        async generate(this: GeneratorState, filename?: string): Promise<void> {
-            this.generating = true;
-            this.error = null;
-
-            try {
-                const card = findCardRoot(this.$root);
-                const dataUrl = await createOgImageDataUrl(card);
-
-                downloadOgImage(dataUrl, resolveOgImageTitle(card, filename));
-            } catch (error) {
-                console.error(error);
-                this.error = 'The PNG could not be generated. Please try again.';
-            } finally {
-                this.generating = false;
-            }
-        },
-    }));
-}
-
 window.OgImageFilament = {
     createOgImageDataUrl,
     downloadOgImage,
@@ -212,6 +131,3 @@ window.OgImageFilament = {
     resolveOgImageTitle,
     waitForCardAssets,
 };
-
-registerAlpineGenerator();
-document.addEventListener('alpine:init', registerAlpineGenerator, { once: true });

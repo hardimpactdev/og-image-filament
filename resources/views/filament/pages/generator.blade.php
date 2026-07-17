@@ -45,7 +45,23 @@
         @if ($activeTab === 'generate')
             <div
                 data-og-generator-layout
-                x-data="ogImageFilamentGenerator"
+                x-data="{
+                    previewHeight: 630,
+                    previewObserver: null,
+                    previewScale: 1,
+                    init() {
+                        this.previewObserver = new ResizeObserver(() => this.syncPreview())
+                        this.previewObserver.observe(this.$refs.previewFrame)
+                        this.$nextTick(() => this.syncPreview())
+                    },
+                    destroy() {
+                        this.previewObserver?.disconnect()
+                    },
+                    syncPreview() {
+                        this.previewScale = Math.min(1, this.$refs.previewFrame.clientWidth / 1200)
+                        this.previewHeight = 630 * this.previewScale
+                    },
+                }"
                 style="display: grid; gap: 1.5rem; min-width: 0"
             >
                 <form wire:submit="generate" style="display: grid; gap: 1.5rem; min-width: 0">
@@ -62,6 +78,7 @@
                     <div class="rounded-xl border border-gray-200 bg-gray-100 p-4 dark:border-white/10 dark:bg-white/5" style="max-width: 100%; overflow: hidden">
                         <div
                             data-og-preview-frame
+                            x-ref="previewFrame"
                             x-bind:style="`height: ${previewHeight}px`"
                             style="position: relative; width: 100%; overflow: hidden"
                         >
