@@ -41,6 +41,33 @@ it('renders the configured template when Livewire has no current panel', functio
         ->assertSee('grid-template-columns: minmax(20rem, 0.75fr) minmax(36rem, 1.25fr)', escape: false);
 });
 
+it('uses the selected resource template for the preview', function (): void {
+    $user = User::query()->create([
+        'name' => 'Admin',
+        'email' => 'admin@example.com',
+        'password' => 'password',
+    ]);
+    $plugin = Filament::getDefaultPanel()->getPlugin('og-image-filament');
+
+    if (! $plugin instanceof OgImageFilamentPlugin) {
+        throw new LogicException('The test panel registered an unexpected OG image plugin.');
+    }
+
+    view()->addNamespace('test-og-images', dirname(__DIR__).'/Fixtures/views');
+    $plugin->getSources()[PostResource::class]
+        ->template('test-og-images::source-card');
+    $component = app(LivewireManager::class)->actingAs($user)
+        ->test(OgImageGenerator::class);
+
+    expect($component->instance()->previewTemplate())
+        ->toBe($plugin->getTemplate());
+
+    $component->set('data.source', PostResource::class);
+
+    expect($component->instance()->previewTemplate())
+        ->toBe('test-og-images::source-card');
+});
+
 it('selects a resource record and populates mapped properties', function (): void {
     $post = Post::query()->create([
         'title' => 'Mapped title',

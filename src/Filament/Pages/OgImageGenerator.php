@@ -152,7 +152,10 @@ final class OgImageGenerator extends Page
 
     public function previewTemplate(): string
     {
-        return $this->plugin()->getTemplate();
+        $plugin = $this->plugin();
+
+        return $this->selectedSource()?->resolveTemplate($plugin->getTemplate())
+            ?? $plugin->getTemplate();
     }
 
     public function generate(): void
