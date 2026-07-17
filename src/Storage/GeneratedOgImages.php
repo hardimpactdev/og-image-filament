@@ -14,10 +14,14 @@ use Throwable;
 
 final readonly class GeneratedOgImages
 {
-    /** @param null|Closure(Cloud, string, string): bool $writer */
+    /**
+     * @param  null|Closure(Cloud, string, string): bool  $writer
+     * @param  null|Closure(Cloud, string): bool  $deleter
+     */
     public function __construct(
         private FilesystemManager $filesystems,
         private ?Closure $writer = null,
+        private ?Closure $deleter = null,
     ) {}
 
     public function replace(string $path, string $png): void
@@ -55,6 +59,24 @@ final readonly class GeneratedOgImages
         }
 
         return $disk->url($fullPath);
+    }
+
+    public function delete(string $path): void
+    {
+        $disk = $this->disk();
+        $fullPath = $this->fullPath($path);
+
+        if (! $disk->exists($fullPath)) {
+            return;
+        }
+
+        $deleted = $this->deleter === null
+            ? $disk->delete($fullPath)
+            : ($this->deleter)($disk, $fullPath);
+
+        if (! $deleted) {
+            throw new RuntimeException("The generated OG image [{$fullPath}] could not be deleted.");
+        }
     }
 
     private function disk(): Cloud

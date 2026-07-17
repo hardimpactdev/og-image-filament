@@ -46,6 +46,13 @@ final readonly class OgImageManager
         return $this->images->url($resourceSource->resolvePath($record));
     }
 
+    public function delete(string $panelId, string $source, Model $record): void
+    {
+        $resourceSource = $this->source($this->plugin($panelId), $source);
+
+        $this->images->delete($resourceSource->resolvePath($record));
+    }
+
     private function plugin(string $panelId): OgImageFilamentPlugin
     {
         $panel = app(PanelRegistry::class)->get($panelId, isStrict: false);

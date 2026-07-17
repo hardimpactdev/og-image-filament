@@ -50,3 +50,22 @@ it('preserves the last good image when a replacement write fails', function (): 
             'og-images/articles/1.png',
         ]);
 });
+
+it('deletes existing images and hard fails when deletion fails', function (): void {
+    $images = resolve(GeneratedOgImages::class);
+    $images->replace('articles/1.png', 'png');
+
+    $failingImages = new GeneratedOgImages(
+        app(FilesystemManager::class),
+        deleter: fn (Cloud $disk, string $path): bool => false,
+    );
+
+    expect(fn () => $failingImages->delete('articles/1.png'))
+        ->toThrow(RuntimeException::class, 'could not be deleted');
+
+    Storage::disk('public')->assertExists('og-images/articles/1.png');
+
+    $images->delete('articles/1.png');
+
+    Storage::disk('public')->assertMissing('og-images/articles/1.png');
+});

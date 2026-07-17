@@ -86,6 +86,8 @@ The package passes the resolved DTO to Blade as `$data`:
 
 Templates and DTOs belong to the consuming application, so changes remain versioned in Git and deploy with the app. Missing templates, resolvers, paths, and render failures throw immediately.
 
+Models that implement `GeneratesOgImages` and use `InteractsWithOgImages` regenerate synchronously after each committed save. Deleting the model removes its PNG before the database row is deleted. Generation and deletion failures propagate to the caller.
+
 ## Configuration
 
 ```dotenv
