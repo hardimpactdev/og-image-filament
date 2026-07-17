@@ -50,6 +50,7 @@ final class OgImageGenerator extends Page
                 Select::make('entry')
                     ->label('Entry')
                     ->searchable()
+                    ->searchDebounce(300)
                     ->required()
                     ->disabled(fn (Get $get): bool => blank($get('source')))
                     ->getSearchResultsUsing(

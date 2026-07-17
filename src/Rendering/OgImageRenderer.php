@@ -52,6 +52,10 @@ final readonly class OgImageRenderer
             $browsershot->setChromePath($chromePath);
         }
 
+        if (config()->boolean('og-image-filament.no_sandbox')) {
+            $browsershot->noSandbox();
+        }
+
         $temporaryBase = tempnam(sys_get_temp_dir(), 'og-image-');
 
         if ($temporaryBase === false) {

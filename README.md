@@ -95,7 +95,10 @@ OG_IMAGE_DISK=public
 OG_IMAGE_DIRECTORY=og-images
 OG_IMAGE_NODE_BINARY=/path/to/node
 OG_IMAGE_CHROME_PATH=/path/to/chrome
+OG_IMAGE_NO_SANDBOX=false
 ```
+
+Set `OG_IMAGE_NO_SANDBOX=true` only when Chromium runs as root inside a trusted container.
 
 ## Development
 

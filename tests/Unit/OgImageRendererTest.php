@@ -9,6 +9,7 @@ use Workbench\App\Data\PostOgImageData;
 it('renders a complete 1200 by 630 PNG document without launching Chrome', function (): void {
     config()->set('og-image-filament.node_binary', '/custom/node');
     config()->set('og-image-filament.chrome_path', '/custom/chrome');
+    config()->set('og-image-filament.no_sandbox', true);
 
     $browser = new FakeBrowsershot;
     $html = null;
@@ -28,6 +29,7 @@ it('renders a complete 1200 by 630 PNG document without launching Chrome', funct
         ->and($browser->window)->toBe([1200, 630])
         ->and($browser->nodeBinary)->toBe('/custom/node')
         ->and($browser->chromePath)->toBe('/custom/chrome')
+        ->and($browser->sandboxDisabled)->toBeTrue()
         ->and($browser->savedPath)->not->toBeNull();
 
     if ($browser->savedPath === null) {
@@ -48,6 +50,8 @@ final class FakeBrowsershot extends Browsershot
 
     public ?string $savedPath = null;
 
+    public bool $sandboxDisabled = false;
+
     public function windowSize(int $width, int $height): static
     {
         $this->window = [$width, $height];
@@ -65,6 +69,13 @@ final class FakeBrowsershot extends Browsershot
     public function setChromePath(string $executablePath): static
     {
         $this->chromePath = $executablePath;
+
+        return $this;
+    }
+
+    public function noSandbox(): static
+    {
+        $this->sandboxDisabled = true;
 
         return $this;
     }
