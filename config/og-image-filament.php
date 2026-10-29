@@ -3,9 +3,15 @@
 declare(strict_types=1);
 
 return [
+    'renderer' => 'browsershot',
     'disk' => env('OG_IMAGE_DISK', 'public'),
     'directory' => env('OG_IMAGE_DIRECTORY', 'og-images'),
     'node_binary' => env('OG_IMAGE_NODE_BINARY'),
     'chrome_path' => env('OG_IMAGE_CHROME_PATH'),
     'no_sandbox' => env('OG_IMAGE_NO_SANDBOX', false),
+    'satori' => [
+        'templates' => [],
+        'node_modules' => base_path('node_modules'),
+        'timeout_seconds' => 10,
+    ],
 ];

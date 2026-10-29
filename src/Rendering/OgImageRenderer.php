@@ -19,7 +19,20 @@ final readonly class OgImageRenderer
 
     public function render(string $view, object $data): string
     {
+        $renderer = config('og-image-filament.renderer', 'browsershot');
+
+        if ($renderer === 'satori') {
+            return app(SatoriRenderer::class)->render($view, $data);
+        }
+
+        if ($renderer !== 'browsershot') {
+            throw new RuntimeException('Unknown OG image renderer.');
+        }
+
         $viewFactory = $this->viewFactory ?? app(ViewFactory::class);
+        if (! $viewFactory->exists($view)) {
+            throw new RuntimeException('The OG image Blade view does not exist.');
+        }
         $card = $viewFactory->make($view, ['data' => $data])->render();
         $html = <<<HTML
             <!DOCTYPE html>
