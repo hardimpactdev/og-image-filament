@@ -7,12 +7,18 @@ on:
       - '.github/workflows/run-tests.yml'
       - 'phpunit.xml.dist'
       - 'composer.json'
+      - 'resources/node/**'
+      - 'tests/Fixtures/satori/**'
+      - 'package*.json'
   pull_request:
     paths:
       - '**.php'
       - '.github/workflows/run-tests.yml'
       - 'phpunit.xml.dist'
       - 'composer.json'
+      - 'resources/node/**'
+      - 'tests/Fixtures/satori/**'
+      - 'package*.json'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -45,6 +51,15 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo
           coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.22.1'
+          cache: npm
+
+      - name: Install renderer dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Setup problem matchers
         run: |

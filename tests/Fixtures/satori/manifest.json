@@ -1,0 +1,19 @@
+{
+    "templates": {
+        "card": {
+            "background": "assets/background.png"
+        },
+        "missing-background": {
+            "background": "assets/missing.png"
+        },
+        "outside-background": {
+            "background": "../outside.png"
+        }
+    },
+    "fonts": [
+        {
+            "name": "Fixture",
+            "file": "assets/font.ttf"
+        }
+    ]
+}
